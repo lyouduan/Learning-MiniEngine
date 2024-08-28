@@ -20,15 +20,37 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameApp.h" />
+    <ClInclude Include="Graphic\GraphicsCore.h" />
     <ClInclude Include="Graphic\d3dx12.h" />
     <ClInclude Include="Graphic\GameCore.h" />
+    <ClInclude Include="Graphic\Math\BoundingPlane.h" />
+    <ClInclude Include="Graphic\Math\BoundingSphere.h" />
+    <ClInclude Include="Graphic\Math\Common.h" />
+    <ClInclude Include="Graphic\Math\Frustum.h" />
+    <ClInclude Include="Graphic\Math\Matrix3.h" />
+    <ClInclude Include="Graphic\Math\Matrix4.h" />
+    <ClInclude Include="Graphic\Math\Quaternion.h" />
+    <ClInclude Include="Graphic\Math\Random.h" />
+    <ClInclude Include="Graphic\Math\Scalar.h" />
+    <ClInclude Include="Graphic\Math\Transform.h" />
+    <ClInclude Include="Graphic\Math\Vector.h" />
     <ClInclude Include="Graphic\pch.h" />
+    <ClInclude Include="Graphic\Utility.h" />
+    <ClInclude Include="Graphic\VectorMath.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GameApp.cpp" />
+    <ClCompile Include="Graphic\GraphicsCore.cpp" />
     <ClCompile Include="Graphic\GameCore.cpp" />
+    <ClCompile Include="Graphic\Math\BoundingSphere.cpp" />
+    <ClCompile Include="Graphic\Math\Frustum.cpp" />
+    <ClCompile Include="Graphic\Math\Random.cpp" />
     <ClCompile Include="Graphic\pch.cpp" />
+    <ClCompile Include="Graphic\Utility.cpp" />
     <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Graphic\Math\Functions.inl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

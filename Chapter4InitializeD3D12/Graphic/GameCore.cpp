@@ -14,6 +14,7 @@
 #include "pch.h"
 #include "GameCore.h"
 #include <shellapi.h>
+#include "GraphicsCore.h"
 
 #pragma comment(lib, "runtimeobject.lib") 
 
@@ -24,6 +25,8 @@ namespace GameCore
 
     void InitializeApplication( IGameApp& game )
     {
+        Graphics::Initialize();
+
         game.Startup();
     }
 
@@ -61,7 +64,7 @@ namespace GameCore
         wcex.lpszMenuName = nullptr;
         wcex.lpszClassName = className;
         wcex.hIconSm = LoadIcon(hInst, IDI_APPLICATION);
-        assert(0 != RegisterClassEx(&wcex) && "Unable to register a window");
+        ASSERT(0 != RegisterClassEx(&wcex),  "Unable to register a window");
 
         // Create window
         //RECT rc = { 0, 0, (LONG)g_DisplayWidth, (LONG)g_DisplayHeight };
@@ -71,7 +74,7 @@ namespace GameCore
         g_hWnd = CreateWindow(className, className, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
             rc.right - rc.left, rc.bottom - rc.top, nullptr, nullptr, hInst, nullptr);
 
-        assert(g_hWnd != 0);
+        ASSERT(g_hWnd != 0);
 
         InitializeApplication(app);
 

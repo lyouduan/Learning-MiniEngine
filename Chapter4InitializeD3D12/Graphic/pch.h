@@ -52,6 +52,10 @@
     #include <dxgidebug.h>
 #endif
 
+#pragma comment(lib, "d3d12.lib")
+#pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "dxguid.lib")
+
 #define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 #define MY_IID_PPV_ARGS                     IID_PPV_ARGS
@@ -70,3 +74,5 @@
 #include <ppltasks.h>
 #include <functional>
 
+#include "Utility.h"
+#include "VectorMath.h"
