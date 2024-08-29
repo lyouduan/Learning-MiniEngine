@@ -19,6 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Graphic\CommandAllocatorPool.h" />
+    <ClInclude Include="Graphic\CommandListManager.h" />
+    <ClInclude Include="Graphic\Display.h" />
     <ClInclude Include="GameApp.h" />
     <ClInclude Include="Graphic\GraphicsCore.h" />
     <ClInclude Include="Graphic\d3dx12.h" />
@@ -39,6 +42,9 @@
     <ClInclude Include="Graphic\VectorMath.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Graphic\CommandAllocatorPool.cpp" />
+    <ClCompile Include="Graphic\CommandListManager.cpp" />
+    <ClCompile Include="Graphic\Display.cpp" />
     <ClCompile Include="GameApp.cpp" />
     <ClCompile Include="Graphic\GraphicsCore.cpp" />
     <ClCompile Include="Graphic\GameCore.cpp" />

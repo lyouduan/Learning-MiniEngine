@@ -1,8 +1,13 @@
 #include "GraphicsCore.h"
+#include "CommandListManager.h"
+#include "Display.h"
+
 
 namespace Graphics
 {
     ID3D12Device* g_Device = nullptr;
+    CommandListManager g_CommandManager;
+
 }
 // Initialize the DirectX resources required to run.
 void Graphics::Initialize(void)
@@ -148,5 +153,11 @@ void Graphics::Initialize(void)
         pInfoQueue->Release();
     }
 #endif
+
+    // create CommandQueue by g_Device
+    g_CommandManager.Create(g_Device);
+
+    // create SwapChain 
+    Display::Initialize();
 
 }

@@ -15,11 +15,13 @@
 #include "GameCore.h"
 #include <shellapi.h>
 #include "GraphicsCore.h"
+#include "Display.h"
 
 #pragma comment(lib, "runtimeobject.lib") 
 
 namespace GameCore
 {
+    using namespace Graphics;
 
     bool gIsSupending = false;
 
@@ -78,7 +80,7 @@ namespace GameCore
 
         InitializeApplication(app);
 
-        ShowWindow( g_hWnd, nCmdShow/*SW_SHOWDEFAULT*/ );
+        ShowWindow(g_hWnd, nCmdShow/*SW_SHOWDEFAULT*/);
 
         MSG msg = {};
         while (msg.message != WM_QUIT)

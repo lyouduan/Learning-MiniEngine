@@ -65,6 +65,7 @@
 #include <cstdio>
 #include <cstdarg>
 #include <vector>
+#include <queue>
 #include <memory>
 #include <string>
 #include <cwctype>

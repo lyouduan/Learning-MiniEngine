@@ -1,6 +1,8 @@
 #pragma once
 #include "pch.h"
 
+class CommandListManager;
+
 namespace Graphics
 {
 #ifndef RELEASE
@@ -12,8 +14,6 @@ namespace Graphics
 	void Initialize(void);
 
 	extern ID3D12Device* g_Device;
-}
-class GraphicsCore
-{
-};
+	extern CommandListManager g_CommandManager;
 
+}
