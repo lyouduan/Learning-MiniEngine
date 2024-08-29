@@ -1,12 +1,15 @@
 #include "pch.h"
 #include "Display.h"
-#include"GraphicsCore.h"
+#include "GraphicsCore.h"
 #include "CommandListManager.h"
 #include "GameCore.h"
 #include "ColorBuffer.h"
-namespace GameCore { extern HWND g_hWnd; }
 
+namespace GameCore { extern HWND g_hWnd; }
+#ifndef SWAP_CHAIN_BUFFER_COUNT
 #define SWAP_CHAIN_BUFFER_COUNT 3
+#endif // SWAP_CHAIN_BUFFER_COUNT
+
 DXGI_FORMAT SwapChainFormat = DXGI_FORMAT_R10G10B10A2_UNORM;
 
 using namespace Graphics;
@@ -20,7 +23,6 @@ namespace Graphics
 
 	ColorBuffer g_DisplayPlane[SWAP_CHAIN_BUFFER_COUNT];
 	UINT g_CurrentBuffer = 0; // tack to current buffer
-
 }
 
 void Display::Initialize(void)

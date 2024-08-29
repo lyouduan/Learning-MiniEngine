@@ -19,6 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Graphic\CommandContext.h" />
+    <ClInclude Include="Graphic\DescriptorHeap.h" />
+    <ClInclude Include="Graphic\GpuBuffer.h" />
+    <ClInclude Include="Graphic\ColorBuffer.h" />
+    <ClInclude Include="Graphic\GpuResource.h" />
     <ClInclude Include="Graphic\CommandAllocatorPool.h" />
     <ClInclude Include="Graphic\CommandListManager.h" />
     <ClInclude Include="Graphic\Display.h" />
@@ -40,8 +45,14 @@
     <ClInclude Include="Graphic\pch.h" />
     <ClInclude Include="Graphic\Utility.h" />
     <ClInclude Include="Graphic\VectorMath.h" />
+    <ClInclude Include="Graphic\PixelBuffer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Graphic\CommandContext.cpp" />
+    <ClCompile Include="Graphic\DescriptorHeap.cpp" />
+    <ClCompile Include="Graphic\GpuBuffer.cpp" />
+    <ClCompile Include="Graphic\ColorBuffer.cpp" />
+    <ClCompile Include="Graphic\GpuResource.cpp" />
     <ClCompile Include="Graphic\CommandAllocatorPool.cpp" />
     <ClCompile Include="Graphic\CommandListManager.cpp" />
     <ClCompile Include="Graphic\Display.cpp" />
@@ -54,6 +65,7 @@
     <ClCompile Include="Graphic\pch.cpp" />
     <ClCompile Include="Graphic\Utility.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Graphic\PixelBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Graphic\Math\Functions.inl" />

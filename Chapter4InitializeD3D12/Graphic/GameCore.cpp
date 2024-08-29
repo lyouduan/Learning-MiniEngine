@@ -16,6 +16,7 @@
 #include <shellapi.h>
 #include "GraphicsCore.h"
 #include "Display.h"
+#include "CommandContext.h"
 
 #pragma comment(lib, "runtimeobject.lib") 
 
@@ -39,10 +40,12 @@ namespace GameCore
 
     void UpdateApplication( IGameApp& game )
     {
-        
         game.Update(10);
+        // render pass
         game.RenderScene();
-
+        
+        
+        Graphics::Present();
     }
 
     HWND g_hWnd = nullptr;
@@ -51,7 +54,6 @@ namespace GameCore
 
     int RunApplication( IGameApp& app, const wchar_t* className, HINSTANCE hInst, int nCmdShow )
     {
-
         // Register class
         WNDCLASSEX wcex;
         wcex.cbSize = sizeof(WNDCLASSEX);
@@ -69,8 +71,7 @@ namespace GameCore
         ASSERT(0 != RegisterClassEx(&wcex),  "Unable to register a window");
 
         // Create window
-        //RECT rc = { 0, 0, (LONG)g_DisplayWidth, (LONG)g_DisplayHeight };
-        RECT rc = { 0,0, (LONG)800, (LONG)600 };
+        RECT rc = { 0, 0, (LONG)Graphics::g_DisplayWidth, (LONG)Graphics::g_DisplayHeight };
         AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
 
         g_hWnd = CreateWindow(className, className, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,

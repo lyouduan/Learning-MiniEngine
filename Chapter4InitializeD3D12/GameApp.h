@@ -14,4 +14,9 @@ public:
 
 	virtual void Update(float deltaT) override;
 	virtual void RenderScene(void) override;
+
+private:
+	D3D12_VIEWPORT m_Viewport;
+
+	D3D12_RECT m_Scissor;
 };

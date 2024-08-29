@@ -13,3 +13,10 @@ namespace Display
 	void Present(void);
 };
 
+namespace Graphics
+{
+    extern uint32_t g_DisplayWidth;
+    extern uint32_t g_DisplayHeight;
+
+}
+

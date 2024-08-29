@@ -1,12 +1,23 @@
+#include "pch.h"
 #include "GraphicsCore.h"
 #include "CommandListManager.h"
 #include "Display.h"
+#include "CommandContext.h"
+#include "ColorBuffer.h"
 
+
+#ifndef SAFE_RELEASE
+#define SAFE_RELEASE(x) if (x != nullptr) { x->Release(); x = nullptr; }
+#endif
 
 namespace Graphics
 {
+    DXGI_FORMAT SwapChainFormat = DXGI_FORMAT_R10G10B10A2_UNORM;
+
     ID3D12Device* g_Device = nullptr;
     CommandListManager g_CommandManager;
+    ContextManager g_ContextManager;
+
 
     DescriptorAllocator g_DescriptorAllocator[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =
     {
@@ -168,4 +179,64 @@ void Graphics::Initialize(void)
     // create SwapChain 
     Display::Initialize();
 
+}
+
+void Graphics::Resize(uint32_t width, uint32_t height)
+{
+    ASSERT(s_SwapChain1 != nullptr);
+    // Check for invalid window dimensions
+    if (width == 0 || height == 0)
+        return;
+
+    // Check for an unneeded resize
+    if (width == g_DisplayWidth && height == g_DisplayHeight)
+        return;
+    g_CommandManager.IdelGPU();
+
+    g_DisplayWidth = width;
+    g_DisplayHeight = height;
+    
+    DEBUGPRINT("Changing display resolution to %ux%u", width, height);
+
+    for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+        g_DisplayPlane[i].Destroy();
+
+    ASSERT_SUCCEEDED(s_SwapChain1->ResizeBuffers(SWAP_CHAIN_BUFFER_COUNT, width, height, SwapChainFormat, 0));
+
+    for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+    {
+        ComPtr<ID3D12Resource> DisplayPlane;
+        ASSERT_SUCCEEDED(s_SwapChain1->GetBuffer(i, MY_IID_PPV_ARGS(&DisplayPlane)));
+        g_DisplayPlane[i].CreateFromSwapChain(L"Primary SwapChain Buffer", DisplayPlane.Detach());
+    }
+
+    g_CurrentBuffer = 0;
+
+    g_CommandManager.IdelGPU();
+
+}
+
+void Graphics::Terminate(void)
+{
+    g_CommandManager.IdelGPU();
+}
+
+void Graphics::Shutdown(void)
+{
+    CommandContext::DestroyAllContexts();
+    g_CommandManager.ShutDown();
+    s_SwapChain1->Release();
+
+    DescriptorAllocator::DestroyAll();
+
+    for (UINT i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+        g_DisplayPlane[i].Destroy();
+
+    SAFE_RELEASE(g_Device);
+}
+
+void Graphics::Present(void)
+{
+    g_CurrentBuffer = (g_CurrentBuffer + 1) % SWAP_CHAIN_BUFFER_COUNT;
+    s_SwapChain1->Present(0, 0);
 }
