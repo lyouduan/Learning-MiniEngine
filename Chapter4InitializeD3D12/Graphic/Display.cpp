@@ -3,7 +3,7 @@
 #include"GraphicsCore.h"
 #include "CommandListManager.h"
 #include "GameCore.h"
-
+#include "ColorBuffer.h"
 namespace GameCore { extern HWND g_hWnd; }
 
 #define SWAP_CHAIN_BUFFER_COUNT 3
@@ -17,6 +17,9 @@ namespace Graphics
 	uint32_t g_DisplayHeight = 720;
 
 	IDXGISwapChain1* s_SwapChain1 = nullptr;
+
+	ColorBuffer g_DisplayPlane[SWAP_CHAIN_BUFFER_COUNT];
+	UINT g_CurrentBuffer = 0; // tack to current buffer
 
 }
 
@@ -51,6 +54,58 @@ void Display::Initialize(void)
 		nullptr,
 		&s_SwapChain1));
 
+	// create rtv for swapchain
+	for (size_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+	{
+		ComPtr<ID3D12Resource> DisplayPlane;
+		ASSERT_SUCCEEDED(s_SwapChain1->GetBuffer(i, MY_IID_PPV_ARGS(&DisplayPlane)));
+		g_DisplayPlane[i].CreateFromSwapChain(L"Primary SwapChain Buffer", DisplayPlane.Detach());
+	}
+
+}
+
+void Display::Shutdown(void)
+{
+	s_SwapChain1->SetFullscreenState(FALSE, nullptr);
+	s_SwapChain1->Release();
+
+	for (UINT i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+		g_DisplayPlane[i].Destroy();
+
+}
+
+void Display::Resize(uint32_t width, uint32_t height)
+{
+	g_CommandManager.IdelGPU();
+
+	g_DisplayWidth = width;
+	g_DisplayHeight = height;
+
+	DEBUGPRINT("Changing display resolution to %ux%u", width, height);
+
+	for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+		g_DisplayPlane[i].Destroy();
+
+	ASSERT(s_SwapChain1 != nullptr);
+	ASSERT_SUCCEEDED(s_SwapChain1->ResizeBuffers(SWAP_CHAIN_BUFFER_COUNT, width, height, SwapChainFormat, 0));
+
+	for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+	{
+		ComPtr<ID3D12Resource> DisplayPlane;
+		ASSERT_SUCCEEDED(s_SwapChain1->GetBuffer(i, MY_IID_PPV_ARGS(&DisplayPlane)));
+		g_DisplayPlane[i].CreateFromSwapChain(L"Primary SwapChain Buffer", DisplayPlane.Detach());
+	}
+
+	g_CurrentBuffer = 0;
+
+	g_CommandManager.IdelGPU();
 	
+}
+
+void Display::Present(void)
+{
+	s_SwapChain1->Present(0, 0);
+	g_CurrentBuffer = (g_CurrentBuffer + 1) % SWAP_CHAIN_BUFFER_COUNT;
+	 
 }
 
