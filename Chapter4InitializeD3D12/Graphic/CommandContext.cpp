@@ -108,12 +108,13 @@ uint64_t CommandContext::Finish(bool WaitForCompletion)
 {
     ASSERT(m_Type == D3D12_COMMAND_LIST_TYPE_DIRECT || m_Type == D3D12_COMMAND_LIST_TYPE_COMPUTE);
 
+    // make sure previous barriers flush
     FlushResourceBarriers();
 
     ASSERT(m_CurrentAllocator != nullptr);
 
     CommandQueue& Queue = g_CommandManager.GetQueue(m_Type);
-
+    
     uint64_t FenceValue = Queue.ExecuteCommandList(m_CommandList);
     Queue.DiscardAllocator(FenceValue, m_CurrentAllocator);
     m_CurrentAllocator = nullptr;

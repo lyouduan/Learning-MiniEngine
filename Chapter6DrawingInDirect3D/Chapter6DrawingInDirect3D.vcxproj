@@ -19,19 +19,70 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="GameApp.h" />
+    <ClInclude Include="Core\Command\CommandContext.h" />
+    <ClInclude Include="Core\Utils\Color.h" />
+    <ClInclude Include="Core\Resource\ColorBuffer.h" />
+    <ClInclude Include="Core\Command\CommandAllocatorPool.h" />
+    <ClInclude Include="Core\Command\CommandListManager.h" />
+    <ClInclude Include="Core\d3dx12.h" />
+    <ClInclude Include="Core\Display.h" />
+    <ClInclude Include="Core\GameCore.h" />
+    <ClInclude Include="Core\Resource\GpuResource.h" />
+    <ClInclude Include="Core\GraphicsCore.h" />
+    <ClInclude Include="Core\Math\BoundingBox.h" />
+    <ClInclude Include="Core\Math\BoundingPlane.h" />
+    <ClInclude Include="Core\Math\BoundingSphere.h" />
+    <ClInclude Include="Core\Math\Common.h" />
+    <ClInclude Include="Core\Math\Frustum.h" />
+    <ClInclude Include="Core\Math\Matrix3.h" />
+    <ClInclude Include="Core\Math\Matrix4.h" />
+    <ClInclude Include="Core\Math\Quaternion.h" />
+    <ClInclude Include="Core\Math\Random.h" />
+    <ClInclude Include="Core\Math\Scalar.h" />
+    <ClInclude Include="Core\Math\Transform.h" />
+    <ClInclude Include="Core\Math\Vector.h" />
+    <ClInclude Include="Core\Utils\pch.h" />
+    <ClInclude Include="Core\Resource\PixelBuffer.h" />
+    <ClInclude Include="Core\Utils\Utility.h" />
+    <ClInclude Include="Core\Utils\VectorMath.h" />
+    <ClInclude Include="Core\Resource\DescriptorHeap.h" />
+    <ClInclude Include="Core\Resource\DepthBuffer.h" />
+    <ClInclude Include="Game.h" />
+    <ClInclude Include="Core\Resource\GpuBuffer.h" />
+    <ClInclude Include="Core\Resource\UploadBuffer.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GameApp.cpp" />
+    <ClCompile Include="Core\Command\CommandContext.cpp" />
+    <ClCompile Include="Core\Utils\Color.cpp" />
+    <ClCompile Include="Core\Resource\ColorBuffer.cpp" />
+    <ClCompile Include="Core\Command\CommandAllocatorPool.cpp" />
+    <ClCompile Include="Core\Command\CommandListManager.cpp" />
+    <ClCompile Include="Core\Display.cpp" />
+    <ClCompile Include="Core\GameCore.cpp" />
+    <ClCompile Include="Core\Resource\GpuResource.cpp" />
+    <ClCompile Include="Core\GraphicsCore.cpp" />
+    <ClCompile Include="Core\Math\BoundingSphere.cpp" />
+    <ClCompile Include="Core\Math\Frustum.cpp" />
+    <ClCompile Include="Core\Math\Random.cpp" />
+    <ClCompile Include="Core\Utils\pch.cpp" />
+    <ClCompile Include="Core\Resource\PixelBuffer.cpp" />
+    <ClCompile Include="Core\Utils\Utility.cpp" />
+    <ClCompile Include="Core\Resource\DescriptorHeap.cpp" />
+    <ClCompile Include="Core\Resource\DepthBuffer.cpp" />
+    <ClCompile Include="Game.cpp" />
+    <ClCompile Include="Core\Resource\GpuBuffer.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Core\Resource\UploadBuffer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Core\Math\Functions.inl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{772b6257-d7a6-4df7-868e-645b6e608c56}</ProjectGuid>
-    <RootNamespace>Chapter4InitializeD3D12</RootNamespace>
+    <ProjectGuid>{6165bd2b-b33d-4483-b294-b328243cb746}</ProjectGuid>
+    <RootNamespace>Chapter6DrawingInDirect3D</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>Chapter4InitializeD3D12</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -84,8 +135,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>Graphic;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>Core;Core\Resource;Core\Utils;Core\Command;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -100,8 +151,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>Graphic;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>Core;Core\Resource;Core\Utils;Core\Command;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -116,8 +167,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>Graphic;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>Core;Core\Resource;Core\Utils;Core\Command;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -132,8 +183,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>Graphic;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>Core;Core\Resource;Core\Utils;Core\Command;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

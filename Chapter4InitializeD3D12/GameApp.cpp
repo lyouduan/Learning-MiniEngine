@@ -26,7 +26,7 @@ void GameApp::RenderScene(void)
 {
     GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Render");
     
-    // transition
+    // transition state of Rtv
     gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 
     gfxContext.SetViewportAndScissor(0,0,g_DisplayWidth, g_DisplayWidth);
@@ -36,8 +36,10 @@ void GameApp::RenderScene(void)
 
     gfxContext.SetRenderTarget(g_DisplayPlane[g_CurrentBuffer].GetRTV());
 
+    // transition state of Rtv
     gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 
+    // commit commandlist to commandQueue
     gfxContext.Finish();
 
 }
