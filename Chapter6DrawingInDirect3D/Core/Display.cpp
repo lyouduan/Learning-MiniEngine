@@ -2,6 +2,7 @@
 #include "Display.h"
 #include "GraphicsCore.h"
 #include "ColorBuffer.h"
+#include "BufferManager.h"
 
 #define CONDITIONALLY_ENABLE_HDR_OUTPUT 1
 
@@ -13,14 +14,93 @@ using namespace Graphics;
 
 namespace Graphics
 {
-	uint32_t g_DisplayWidth = 1280;
+    enum eResolution { k720p, k900p, k1080p, k1440p, k1800p, k2160p };
+    
+    //const char* ResolutionLabels[] = { "1280x720", "1600x900", "1920x1080", "2560x1440", "3200x1800", "3840x2160" };
+    //const uint32_t kNumPredefinedResolutions = 6;
+    //EnumVar NativeResolution("Graphics/Display/Native Resolution", k1080p, kNumPredefinedResolutions, ResolutionLabels);
+
+    //uint32_t g_NativeWidth = 0;
+    //uint32_t g_NativeHeight = 0;
+    uint32_t g_DisplayWidth = 1280;
 	uint32_t g_DisplayHeight = 720;
+
+    //void ResolutionToUINT(eResolution res, uint32_t& width, uint32_t& height)
+    //{
+    //    switch (res)
+    //    {
+    //    default:
+    //    case k720p:
+    //        width = 1280;
+    //        height = 720;
+    //        break;
+    //    case k900p:
+    //        width = 1600;
+    //        height = 900;
+    //        break;
+    //    case k1080p:
+    //        width = 1920;
+    //        height = 1080;
+    //        break;
+    //    case k1440p:
+    //        width = 2560;
+    //        height = 1440;
+    //        break;
+    //    case k1800p:
+    //        width = 3200;
+    //        height = 1800;
+    //        break;
+    //    case k2160p:
+    //        width = 3840;
+    //        height = 2160;
+    //        break;
+    //    }
+    //}
+
+    void SetNativeResolution(void)
+    {
+        //uint32_t NativeWidth, NativeHeight;
+
+        //ResolutionToUINT(eResolution((int)NativeResolution), NativeWidth, NativeHeight);
+        //
+        //if (g_NativeWidth == NativeWidth && g_NativeHeight == NativeHeight)
+        //    return;
+        //DEBUGPRINT("Changing native resolution to %ux%u", NativeWidth, NativeHeight);
+
+        //g_NativeWidth = NativeWidth;
+        //g_NativeHeight = NativeHeight;
+
+        g_CommandManager.IdleGPU();
+
+        // initialize the buffer(DSV)
+        InitializeRenderingBuffers(g_DisplayWidth, g_DisplayHeight);
+    }
+
+    void SetDisplayResolution(void)
+    {
+#ifdef _GAMING_DESKTOP
+        static int SelectedDisplayRes = DisplayResolution;
+        if (SelectedDisplayRes == DisplayResolution)
+            return;
+
+        SelectedDisplayRes = DisplayResolution;
+        ResolutionToUINT((eResolution)SelectedDisplayRes, g_DisplayWidth, g_DisplayHeight);
+        DEBUGPRINT("Changing display resolution to %ux%u", g_DisplayWidth, g_DisplayHeight);
+
+        g_CommandManager.IdleGPU();
+
+        Display::Resize(g_DisplayWidth, g_DisplayHeight);
+
+        SetWindowPos(GameCore::g_hWnd, 0, 0, 0, g_DisplayWidth, g_DisplayHeight, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+#endif
+    }
+
 
     // RTV
     ColorBuffer g_DisplayPlane[SWAP_CHAIN_BUFFER_COUNT];
     UINT g_CurrentBuffer = 0;
 
-	IDXGISwapChain1* s_SwapChain1 = nullptr;
+    IDXGISwapChain1* s_SwapChain1 = nullptr;
 }
 
 void Display::Initialize(void)
@@ -63,6 +143,9 @@ void Display::Initialize(void)
         ASSERT_SUCCEEDED(s_SwapChain1->GetBuffer(i, MY_IID_PPV_ARGS(&DisplayPlane)));
         g_DisplayPlane[i].CreateFromSwapChain(L"Primary SwapChain Buffer", DisplayPlane.Detach());
     }
+
+    // set resolution for buffer
+    SetNativeResolution();
 }
 
 void Display::Shutdown(void) 
@@ -72,7 +155,12 @@ void Display::Shutdown(void)
 
     for (UINT i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
         g_DisplayPlane[i].Destroy();
+
+
+    // depth buffer
+    g_SceneDepthBuffer.Destroy();
 }
+
 void Display::Resize(uint32_t width, uint32_t height)
 {
     g_CommandManager.IdleGPU();
@@ -99,6 +187,9 @@ void Display::Resize(uint32_t width, uint32_t height)
     g_CurrentBuffer = 0;
 
     g_CommandManager.IdleGPU();
+
+
+
 }
 
 void Display::Present(void) 

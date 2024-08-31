@@ -198,6 +198,8 @@ void Graphics::Initialize(bool RequireDXRSupport)
     // create swapchain buffer
     Display::Initialize();
 
+
+
 }
 
 void Graphics::Shutdown(void)

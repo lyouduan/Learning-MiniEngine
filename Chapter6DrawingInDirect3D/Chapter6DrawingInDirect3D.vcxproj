@@ -19,6 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Core\Utils\Hash.h" />
+    <ClInclude Include="Core\Resource\BufferManager.h" />
     <ClInclude Include="Core\Command\CommandContext.h" />
     <ClInclude Include="Core\Utils\Color.h" />
     <ClInclude Include="Core\Resource\ColorBuffer.h" />
@@ -50,8 +52,10 @@
     <ClInclude Include="Game.h" />
     <ClInclude Include="Core\Resource\GpuBuffer.h" />
     <ClInclude Include="Core\Resource\UploadBuffer.h" />
+    <ClInclude Include="Core\RootSignature.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Core\Resource\BufferManager.cpp" />
     <ClCompile Include="Core\Command\CommandContext.cpp" />
     <ClCompile Include="Core\Utils\Color.cpp" />
     <ClCompile Include="Core\Resource\ColorBuffer.cpp" />
@@ -73,6 +77,7 @@
     <ClCompile Include="Core\Resource\GpuBuffer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Core\Resource\UploadBuffer.cpp" />
+    <ClCompile Include="Core\RootSignature.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Core\Math\Functions.inl" />

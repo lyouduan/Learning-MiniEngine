@@ -1,10 +1,14 @@
 #pragma once
 #include "GameCore.h"
+#include "RootSignature.h"
+
+class RootSignature;
+class GraphicsPSO;
 
 class Game : public GameCore::IGameApp
 {
 public:
-	Game() {}
+	Game();
 
 	virtual void Startup(void) override;
 	virtual void Cleanup(void) override;
@@ -13,6 +17,9 @@ public:
 	virtual void RenderScene(void) override;
 
 private:
+
+	RootSignature m_RootSignature;
+	GraphicsPSO m_PSO;
 
 	D3D12_VIEWPORT m_MainViewport;
 	D3D12_RECT m_MainScissor;
