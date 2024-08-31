@@ -2,9 +2,13 @@
 #include "GameCore.h"
 #include "RootSignature.h"
 #include "PipelineSate.h"
+#include "GpuBuffer.h"
+#include "GraphicsCommon.h"
 
 class RootSignature;
 class GraphicsPSO;
+class StructuredBuffer;
+class ByteAddressBuffer;
 
 class Game : public GameCore::IGameApp
 {
@@ -21,6 +25,9 @@ private:
 
 	RootSignature m_RootSignature;
 	GraphicsPSO m_PSO;
+	StructuredBuffer m_VertexBuffer;
+	ByteAddressBuffer m_IndexBuffer;
+	
 
 	D3D12_VIEWPORT m_MainViewport;
 	D3D12_RECT m_MainScissor;

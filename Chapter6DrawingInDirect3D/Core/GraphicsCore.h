@@ -8,7 +8,6 @@
 
 #define SWAP_CHAIN_BUFFER_COUNT 3
 
-
 class CommandListManager;
 class ContextManager;
 

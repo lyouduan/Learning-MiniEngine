@@ -199,7 +199,6 @@ void Graphics::Initialize(bool RequireDXRSupport)
     Display::Initialize();
 
 
-
 }
 
 void Graphics::Shutdown(void)

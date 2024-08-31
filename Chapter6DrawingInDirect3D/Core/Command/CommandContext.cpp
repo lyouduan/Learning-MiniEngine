@@ -2,7 +2,8 @@
 #include "GpuResource.h"
 #include "GraphicsCore.h"
 #include "CommandListManager.h"
-
+#include "PipelineSate.h"
+#include "RootSignature.h"
 using namespace Graphics;
 
 void ContextManager::DestroyAllContexts(void)
@@ -97,6 +98,40 @@ void CommandContext::CopySubresource(GpuResource& Dest, UINT DestSubIndex, GpuRe
 
     m_CommandList->CopyTextureRegion(&DestLocation, 0, 0, 0, &SrcLocation, nullptr);
 }
+
+void CommandContext::InitializeBuffer(GpuBuffer& Dest, const void* Data, size_t NumBytes, size_t DestOffset)
+{
+    CommandContext& InitContext = CommandContext::Begin();
+
+    DynAlloc mem = InitContext.ReserveUploadMemory(NumBytes);
+    SIMDMemCopy(mem.DataPtr, Data, Math::DivideByMultiple(NumBytes, 16));
+
+    // copy data to the intermediate upload heap and then schedule a copy from the upload heap to default texture
+    InitContext.TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST, true);
+    InitContext.m_CommandList->CopyBufferRegion(Dest.GetResource(), DestOffset, mem.Buffer.GetResource(), 0, NumBytes);
+    InitContext.TransitionResource(Dest, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+
+    // Execute the command list and wait for it to finish so we can release the upload buffer
+    InitContext.Finish(true);
+}
+
+void CommandContext::InitializeBuffer(GpuBuffer& Dest, const UploadBuffer& Src, size_t SrcOffset, size_t NumBytes, size_t DestOffset)
+{
+    CommandContext& InitContext = CommandContext::Begin();
+
+    size_t MaxBytes = std::min<size_t>(Dest.GetBufferSize() - DestOffset, Src.GetBufferSize() - SrcOffset);
+    NumBytes = std::min<size_t>(MaxBytes, NumBytes);
+
+    // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default texture
+    InitContext.TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST, true);
+    InitContext.m_CommandList->CopyBufferRegion(Dest.GetResource(), DestOffset, (ID3D12Resource*)Src.GetResource(), SrcOffset, NumBytes);
+    InitContext.TransitionResource(Dest, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+
+    // Execute the command list and wait for it to finish so we can release the upload buffer
+    InitContext.Finish(true);
+}
+
+
 
 void CommandContext::TransitionResource(GpuResource& Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
 {
@@ -198,6 +233,16 @@ inline void CommandContext::SetDescriptorHeaps(UINT HeapCount, D3D12_DESCRIPTOR_
 
     if (AnyChanged)
         BindDescriptorHeaps();
+}
+
+void CommandContext::SetPipelineState(const PSO& PSO)
+{
+    ID3D12PipelineState* PipelineState = PSO.GetPipelineStateObject();
+    if (PipelineState == m_CurPipelineState)
+        return;
+
+    m_CommandList->SetPipelineState(PipelineState);
+    m_CurPipelineState = PipelineState;
 }
 
 inline void CommandContext::SetPredication(ID3D12Resource* Buffer, UINT64 BufferOffset, D3D12_PREDICATION_OP Op)
@@ -348,6 +393,16 @@ void GraphicsContext::EndQuery(ID3D12QueryHeap* QueryHeap, D3D12_QUERY_TYPE Type
 void GraphicsContext::ResolveQueryData(ID3D12QueryHeap* QueryHeap, D3D12_QUERY_TYPE Type, UINT StartIndex, UINT NumQueries, ID3D12Resource* DestinationBuffer, UINT64 DestinationBufferOffset)
 {
     m_CommandList->ResolveQueryData(QueryHeap, Type, StartIndex, NumQueries, DestinationBuffer, DestinationBufferOffset);
+}
+
+void GraphicsContext::SetRootSignature(const RootSignature& RootSig)
+{
+    if (RootSig.GetSignature() == m_CurGraphicsRootSignature)
+        return;
+    m_CommandList->SetGraphicsRootSignature(m_CurGraphicsRootSignature = RootSig.GetSignature());
+
+    //m_DynamicViewDescriptorHeap.ParseGraphicsRootSignature(RootSig);
+    //m_DynamicSamplerDescriptorHeap.ParseGraphicsRootSignature(RootSig);
 }
 
 void GraphicsContext::SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[], D3D12_CPU_DESCRIPTOR_HANDLE DSV)

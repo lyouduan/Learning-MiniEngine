@@ -6,11 +6,16 @@
 #include "UploadBuffer.h"
 #include "ColorBuffer.h"
 #include "DepthBuffer.h"
+#include "LinearAllocator.h"
 
 #include <queue>
 
 class CommandContext;
 class GraphicsContext;
+class RootSignature;
+
+class PSO;
+
 
 struct DWParam
 {
@@ -99,9 +104,14 @@ public:
 	void CopyBufferRegion(GpuResource& Dest, size_t DestOffset, GpuResource& Src, size_t SrcOffset, size_t NumBytes);
 	void CopySubresource(GpuResource& Dest, UINT DestSubIndex, GpuResource& Src, UINT SrcSubIndex);
 
+	DynAlloc ReserveUploadMemory(size_t SizeInBytes)
+	{
+		return m_CpuLinearAllocator.Allocate(SizeInBytes);
+	}
+
 	//static void InitializeTexture(GpuResource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA SubData[]);
-	//static void InitializeBuffer(GpuBuffer& Dest, const void* Data, size_t NumBytes, size_t DestOffset = 0);
-	//static void InitializeBuffer(GpuBuffer& Dest, const UploadBuffer& Src, size_t SrcOffset, size_t NumBytes = -1, size_t DestOffset = 0);
+	static void InitializeBuffer(GpuBuffer& Dest, const void* Data, size_t NumBytes, size_t DestOffset = 0);
+	static void InitializeBuffer(GpuBuffer& Dest, const UploadBuffer& Src, size_t SrcOffset, size_t NumBytes = -1, size_t DestOffset = 0);
 	//static void InitializeTextureArraySlice(GpuResource& Dest, UINT SliceIndex, GpuResource& Src);
 
 	//void WriteBuffer(GpuResource& Dest, size_t DestOffset, const void* Data, size_t NumBytes);
@@ -114,7 +124,7 @@ public:
 
 	void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12DescriptorHeap* HeapPtr);
 	void SetDescriptorHeaps(UINT HeapCount, D3D12_DESCRIPTOR_HEAP_TYPE Type[], ID3D12DescriptorHeap* HeapPtrs[]);
-	//void SetPipelineState(const PSO& PSO);
+	void SetPipelineState(const PSO& PSO);
 
 	void SetPredication(ID3D12Resource* Buffer, UINT64 BufferOffset, D3D12_PREDICATION_OP Op);
 
@@ -135,8 +145,8 @@ protected:
 
 	ID3D12DescriptorHeap* m_CurrentDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
-	//LinearAllocator m_CpuLinearAllocator;
-	//LinearAllocator m_GpuLinearAllocator;
+	LinearAllocator m_CpuLinearAllocator;
+	LinearAllocator m_GpuLinearAllocator;
 
 	std::wstring m_ID;
 	void SetID(const std::wstring& ID) { m_ID = ID; }
@@ -162,7 +172,7 @@ public:
 	void EndQuery(ID3D12QueryHeap* QueryHeap, D3D12_QUERY_TYPE Type, UINT HeapIndex);
 	void ResolveQueryData(ID3D12QueryHeap* QueryHeap, D3D12_QUERY_TYPE Type, UINT StartIndex, UINT NumQueries, ID3D12Resource* DestinationBuffer, UINT64 DestinationBufferOffset);
 
-	//void SetRootSignature(const RootSignature& RootSig);
+	void SetRootSignature(const RootSignature& RootSig);
 
 	void SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[]);
 	void SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[], D3D12_CPU_DESCRIPTOR_HANDLE DSV);
