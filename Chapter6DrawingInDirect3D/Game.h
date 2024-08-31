@@ -1,6 +1,7 @@
 #pragma once
 #include "GameCore.h"
 #include "RootSignature.h"
+#include "PipelineSate.h"
 
 class RootSignature;
 class GraphicsPSO;
