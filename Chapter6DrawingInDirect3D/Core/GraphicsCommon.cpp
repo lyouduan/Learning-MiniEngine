@@ -15,9 +15,9 @@ namespace Graphics
     D3D12_CPU_DESCRIPTOR_HANDLE SamplerLinearBorder;
 
 
-    D3D12_RASTERIZER_DESC RasterizerDefault;	// Counter-clockwise
+    D3D12_RASTERIZER_DESC RasterizerDefault;	// Clockwise
     D3D12_RASTERIZER_DESC RasterizerDefaultMsaa;
-    D3D12_RASTERIZER_DESC RasterizerDefaultCw;	// Clockwise winding
+    D3D12_RASTERIZER_DESC RasterizerDefaultCCw;	// Counter-Clockwise winding
     D3D12_RASTERIZER_DESC RasterizerDefaultCwMsaa;
     D3D12_RASTERIZER_DESC RasterizerTwoSided;
     D3D12_RASTERIZER_DESC RasterizerTwoSidedMsaa;
@@ -46,7 +46,7 @@ void Graphics::InitializeCommonState(void)
     // Default rasterizer states
     RasterizerDefault.FillMode = D3D12_FILL_MODE_SOLID;
     RasterizerDefault.CullMode = D3D12_CULL_MODE_BACK;
-    RasterizerDefault.FrontCounterClockwise = TRUE;
+    RasterizerDefault.FrontCounterClockwise = FALSE; // Clockwise is front in D3D12 bokk
     RasterizerDefault.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
     RasterizerDefault.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
     RasterizerDefault.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
@@ -59,10 +59,10 @@ void Graphics::InitializeCommonState(void)
     RasterizerDefaultMsaa = RasterizerDefault;
     RasterizerDefaultMsaa.MultisampleEnable = TRUE;
 
-    RasterizerDefaultCw = RasterizerDefault;
-    RasterizerDefaultCw.FrontCounterClockwise = FALSE;
+    RasterizerDefaultCCw = RasterizerDefault;
+    RasterizerDefaultCCw.FrontCounterClockwise = FALSE;
 
-    RasterizerDefaultCwMsaa = RasterizerDefaultCw;
+    RasterizerDefaultCwMsaa = RasterizerDefault;
     RasterizerDefaultCwMsaa.MultisampleEnable = TRUE;
 
     RasterizerTwoSided = RasterizerDefault;

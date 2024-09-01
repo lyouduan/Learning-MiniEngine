@@ -2,6 +2,7 @@
 #include "CommandListManager.h"
 #include "Display.h"
 #include "CommandContext.h"
+#include "GraphicsCommon.h"
 
 #ifndef SAFE_RELEASE
 #define SAFE_RELEASE(x) if (x != nullptr) { x->Release(); x = nullptr; }
@@ -195,9 +196,11 @@ void Graphics::Initialize(bool RequireDXRSupport)
     // use device to create command
     g_CommandManager.Create(g_Device);
 
+    // Common state was moved to GraphicsCommon.*
+    InitializeCommonState();
+
     // create swapchain buffer
     Display::Initialize();
-
 
 }
 

@@ -8,15 +8,18 @@
 
 namespace Graphics
 {
+    ColorBuffer g_SceneColorBuffer;
     DepthBuffer g_SceneDepthBuffer;
 
     DXGI_FORMAT DefaultHdrColorFormat = DXGI_FORMAT_R11G11B10_FLOAT;
 }
 
+
 void Graphics::InitializeRenderingBuffers(uint32_t width, uint32_t height)
 {
 	GraphicsContext& InitContext = GraphicsContext::Begin();
 
+	g_SceneColorBuffer.Create(L"Main Color Buffer", width, height, 1, DefaultHdrColorFormat);
 	g_SceneDepthBuffer.Create(L"Scene Depth Buffer", width, height, DSV_FORMAT);
 
 	InitContext.Finish();

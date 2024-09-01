@@ -1,9 +1,11 @@
+#include "pch.h"
 #include "CommandContext.h"
 #include "GpuResource.h"
 #include "GraphicsCore.h"
 #include "CommandListManager.h"
 #include "PipelineSate.h"
 #include "RootSignature.h"
+
 using namespace Graphics;
 
 void ContextManager::DestroyAllContexts(void)
@@ -46,11 +48,11 @@ void ContextManager::FreeContext(CommandContext* UsedContext)
 }
 
 CommandContext::CommandContext(D3D12_COMMAND_LIST_TYPE Type) :
-    m_Type(Type)/*,
+    m_Type(Type),
     m_DynamicViewDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
     m_DynamicSamplerDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
     m_CpuLinearAllocator(kCpuWritable),
-    m_GpuLinearAllocator(kGpuExclusive)*/
+    m_GpuLinearAllocator(kGpuExclusive)
 {
     m_OwningManager = nullptr;
     m_CommandList = nullptr;
@@ -63,14 +65,14 @@ CommandContext::CommandContext(D3D12_COMMAND_LIST_TYPE Type) :
     m_NumBarriersToFlush = 0;
 }
 
-inline void CommandContext::CopyBuffer(GpuResource& Dest, GpuResource& Src)
+void CommandContext::CopyBuffer(GpuResource& Dest, GpuResource& Src)
 {
     TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST);
     TransitionResource(Src, D3D12_RESOURCE_STATE_COPY_SOURCE);
     FlushResourceBarriers();
     m_CommandList->CopyResource(Dest.GetResource(), Src.GetResource());
 }
-inline void CommandContext::CopyBufferRegion(GpuResource& Dest, size_t DestOffset, GpuResource& Src, size_t SrcOffset, size_t NumBytes)
+void CommandContext::CopyBufferRegion(GpuResource& Dest, size_t DestOffset, GpuResource& Src, size_t SrcOffset, size_t NumBytes)
 {
     TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST);
     //TransitionResource(Src, D3D12_RESOURCE_STATE_COPY_SOURCE);
@@ -200,7 +202,7 @@ void CommandContext::BeginResourceTransition(GpuResource& Resource, D3D12_RESOUR
         FlushResourceBarriers();
 }
 
-inline void CommandContext::FlushResourceBarriers(void)
+void CommandContext::FlushResourceBarriers(void)
 {
     if (m_NumBarriersToFlush > 0)
     {
@@ -209,7 +211,7 @@ inline void CommandContext::FlushResourceBarriers(void)
     }
 }
 
-inline void CommandContext::SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12DescriptorHeap* HeapPtr)
+void CommandContext::SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12DescriptorHeap* HeapPtr)
 {
     if (m_CurrentDescriptorHeaps[Type] != HeapPtr)
     {
@@ -218,7 +220,7 @@ inline void CommandContext::SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type, I
     }
 }
 
-inline void CommandContext::SetDescriptorHeaps(UINT HeapCount, D3D12_DESCRIPTOR_HEAP_TYPE Type[], ID3D12DescriptorHeap* HeapPtrs[])
+void CommandContext::SetDescriptorHeaps(UINT HeapCount, D3D12_DESCRIPTOR_HEAP_TYPE Type[], ID3D12DescriptorHeap* HeapPtrs[])
 {
     bool AnyChanged = false;
 
@@ -245,7 +247,7 @@ void CommandContext::SetPipelineState(const PSO& PSO)
     m_CurPipelineState = PipelineState;
 }
 
-inline void CommandContext::SetPredication(ID3D12Resource* Buffer, UINT64 BufferOffset, D3D12_PREDICATION_OP Op)
+void CommandContext::SetPredication(ID3D12Resource* Buffer, UINT64 BufferOffset, D3D12_PREDICATION_OP Op)
 {
     m_CommandList->SetPredication(Buffer, BufferOffset, Op);
 }
@@ -333,6 +335,11 @@ uint64_t CommandContext::Finish(bool WaitForCompletion)
     Queue.DiscardAllocator(FenceValue, m_CurrentAllocator);
     m_CurrentAllocator = nullptr;
 
+    m_CpuLinearAllocator.CleanupUsedPages(FenceValue);
+    m_GpuLinearAllocator.CleanupUsedPages(FenceValue);
+    m_DynamicViewDescriptorHeap.CleanupUsedHeaps(FenceValue);
+    m_DynamicSamplerDescriptorHeap.CleanupUsedHeaps(FenceValue);
+
     if (WaitForCompletion)
         g_CommandManager.WaitForFence(FenceValue);
 
@@ -401,8 +408,8 @@ void GraphicsContext::SetRootSignature(const RootSignature& RootSig)
         return;
     m_CommandList->SetGraphicsRootSignature(m_CurGraphicsRootSignature = RootSig.GetSignature());
 
-    //m_DynamicViewDescriptorHeap.ParseGraphicsRootSignature(RootSig);
-    //m_DynamicSamplerDescriptorHeap.ParseGraphicsRootSignature(RootSig);
+    m_DynamicViewDescriptorHeap.ParseGraphicsRootSignature(RootSig);
+    m_DynamicSamplerDescriptorHeap.ParseGraphicsRootSignature(RootSig);
 }
 
 void GraphicsContext::SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[], D3D12_CPU_DESCRIPTOR_HANDLE DSV)

@@ -1,6 +1,7 @@
 #include "GameCore.h"
 #include "GraphicsCore.h"
 #include "Display.h"
+#include "GameInput.h"
 
 using namespace Graphics;
 
@@ -13,22 +14,25 @@ namespace GameCore
 	void InitializeApplication(IGameApp& game)
 	{
 		Graphics::Initialize();
-
+		GameInput::Initialize();
 		game.Startup();
 	}
 
 	
 	void TerminateApplication(IGameApp& game)
 	{
+		g_CommandManager.IdleGPU();
 		game.Cleanup();
+		GameInput::Shutdown();
 	}
 
 	void UpdateApplication(IGameApp& game)
 	{
+		GameInput::Update(0);
+
 		game.Update(0);
 		// render
 		game.RenderScene();
-
 
 		// present
 		Display::Present();

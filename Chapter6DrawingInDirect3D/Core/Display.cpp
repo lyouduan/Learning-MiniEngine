@@ -156,9 +156,8 @@ void Display::Shutdown(void)
     for (UINT i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
         g_DisplayPlane[i].Destroy();
 
-
-    // depth buffer
-    g_SceneDepthBuffer.Destroy();
+    // buffer
+    DestroyRenderingBuffers();
 }
 
 void Display::Resize(uint32_t width, uint32_t height)

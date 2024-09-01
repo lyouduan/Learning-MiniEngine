@@ -13,7 +13,7 @@ namespace Graphics
 
     extern D3D12_RASTERIZER_DESC RasterizerDefault;
     extern D3D12_RASTERIZER_DESC RasterizerDefaultMsaa;
-    extern D3D12_RASTERIZER_DESC RasterizerDefaultCw;
+    extern D3D12_RASTERIZER_DESC RasterizerDefaultCCw;
     extern D3D12_RASTERIZER_DESC RasterizerDefaultCwMsaa;
     extern D3D12_RASTERIZER_DESC RasterizerTwoSided;
     extern D3D12_RASTERIZER_DESC RasterizerTwoSidedMsaa;

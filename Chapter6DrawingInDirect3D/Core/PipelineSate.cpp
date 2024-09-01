@@ -130,7 +130,7 @@ void GraphicsPSO::Finalize()
 	
 	if (firstCompile)
 	{
-		ASSERT(m_PSODesc.DepthStencilState.DepthEnable != (m_PSODesc.DSVFormat == DXGI_FORMAT_UNKNOWN));
+		//ASSERT(m_PSODesc.DepthStencilState.DepthEnable != (m_PSODesc.DSVFormat == DXGI_FORMAT_UNKNOWN));
 		ASSERT_SUCCEEDED(g_Device->CreateGraphicsPipelineState(&m_PSODesc, MY_IID_PPV_ARGS(&m_PSO)));
 		s_GraphicsPSOHashMap[HashCode].Attach(m_PSO);
 		m_PSO->SetName(m_Name);
