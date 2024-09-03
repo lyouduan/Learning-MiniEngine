@@ -117,9 +117,6 @@
     <ClInclude Include="Core\GraphicsCore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Core\PipelineSate.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Core\RootSignature.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -201,9 +198,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Core\GraphicsCore.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\PipelineSate.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Core\RootSignature.cpp">

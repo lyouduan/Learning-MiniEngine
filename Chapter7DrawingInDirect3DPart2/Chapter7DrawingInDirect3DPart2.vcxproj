@@ -51,6 +51,7 @@
     <ClInclude Include="Core\Resource\GpuBuffer.h" />
     <ClInclude Include="Core\Resource\PixelBuffer.h" />
     <ClInclude Include="Core\Command\RootSignature.h" />
+    <ClInclude Include="Core\Command\PipelineState.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Core\Command\CommandContext.cpp" />
@@ -74,6 +75,7 @@
     <ClCompile Include="Core\Utils\pch.cpp" />
     <ClCompile Include="Core\Resource\PixelBuffer.cpp" />
     <ClCompile Include="Core\Command\RootSignature.cpp" />
+    <ClCompile Include="Core\Command\PipelineState.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Core\Math\Functions.inl" />

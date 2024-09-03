@@ -26,11 +26,15 @@ void GameApp::Startup(void)
 	// initialize root signature
 	m_RootSignature.Reset(0, 0);
 
+
+	// PSO
+	m_PSO.SetRootSignature(m_RootSignature);
 }
 
 void GameApp::Cleanup(void)
 {
-
+	m_RootSignature.DestroyAll();
+	m_PSO.DestroyAll();
 }
 
 void GameApp::Update(float deltaT)

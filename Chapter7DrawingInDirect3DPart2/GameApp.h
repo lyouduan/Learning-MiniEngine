@@ -2,7 +2,7 @@
 
 #include "GameCore.h"
 #include "RootSignature.h"
-
+#include "PipelineState.h"
 
 class DepthBuffer;
 class GameApp : public GameCore::IGameApp
@@ -20,6 +20,7 @@ public:
 private:
 
 	RootSignature m_RootSignature;
+	GraphicsPSO m_PSO;
 
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;

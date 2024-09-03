@@ -40,7 +40,6 @@
     <ClInclude Include="Core\Math\Scalar.h" />
     <ClInclude Include="Core\Math\Transform.h" />
     <ClInclude Include="Core\Math\Vector.h" />
-    <ClInclude Include="Core\PipelineSate.h" />
     <ClInclude Include="Core\Resource\BufferManager.h" />
     <ClInclude Include="Core\Resource\ColorBuffer.h" />
     <ClInclude Include="Core\Resource\DepthBuffer.h" />
@@ -70,7 +69,6 @@
     <ClCompile Include="Core\Math\BoundingSphere.cpp" />
     <ClCompile Include="Core\Math\Frustum.cpp" />
     <ClCompile Include="Core\Math\Random.cpp" />
-    <ClCompile Include="Core\PipelineSate.cpp" />
     <ClCompile Include="Core\Resource\BufferManager.cpp" />
     <ClCompile Include="Core\Resource\ColorBuffer.cpp" />
     <ClCompile Include="Core\Resource\DepthBuffer.cpp" />
