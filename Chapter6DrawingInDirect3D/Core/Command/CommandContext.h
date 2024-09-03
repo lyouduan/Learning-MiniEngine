@@ -1,3 +1,4 @@
+#if 0
 #pragma once
 #include "pch.h"
 #include "GraphicsCore.h"
@@ -149,8 +150,8 @@ protected:
 
 	ID3D12DescriptorHeap* m_CurrentDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
-	LinearAllocator m_CpuLinearAllocator;
-	LinearAllocator m_GpuLinearAllocator;
+	LinearAllocator m_CpuLinearAllocator; // CpulinearAllocator is used to create upload buffer
+	LinearAllocator m_GpuLinearAllocator; // GpulinearAllocator is used to create default buffer
 
 	std::wstring m_ID;
 	void SetID(const std::wstring& ID) { m_ID = ID; }
@@ -360,8 +361,10 @@ inline void GraphicsContext::SetConstantBuffer( UINT RootIndex, D3D12_GPU_VIRTUA
 
 inline void GraphicsContext::SetDynamicConstantBufferView( UINT RootIndex, size_t BufferSize, const void* BufferData )
 {
+	// request a upload buffer (constant buffer need to align 256B)
     ASSERT(BufferData != nullptr && Math::IsAligned(BufferData, 16));
-    DynAlloc cb = m_CpuLinearAllocator.Allocate(BufferSize);
+    DynAlloc cb = m_CpuLinearAllocator.Allocate(BufferSize); 
+	// copy data to constant buffer
     SIMDMemCopy(cb.DataPtr, BufferData, Math::AlignUp(BufferSize, 16) >> 4);
 	// memcpy(cb.DataPtr, BufferData, BufferSize);
     m_CommandList->SetGraphicsRootConstantBufferView(RootIndex, cb.GpuAddress);
@@ -419,3 +422,4 @@ inline void GraphicsContext::SetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY Topol
 	m_CommandList->IASetPrimitiveTopology(Topology);
 }
 
+#endif

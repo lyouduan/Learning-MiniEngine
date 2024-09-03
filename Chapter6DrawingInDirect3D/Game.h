@@ -15,6 +15,7 @@ class GraphicsPSO;
 class StructuredBuffer;
 class ByteAddressBuffer;
 
+
 class Game : public GameCore::IGameApp
 {
 public:
@@ -33,6 +34,7 @@ private:
 	StructuredBuffer m_VertexBuffer;
 	ByteAddressBuffer m_IndexBuffer;
 	
+	//XMMATRIX m_MVP;
 	XMMATRIX m_MVP;
 
 	Color m_color;

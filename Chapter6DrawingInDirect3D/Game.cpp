@@ -122,6 +122,7 @@ void Game::Startup(void)
     m_MainScissor.right = (LONG)g_DisplayPlane[g_CurrentBuffer].GetWidth();
     m_MainScissor.bottom = (LONG)g_DisplayPlane[g_CurrentBuffer].GetHeight();
     
+
 }
 
 void Game::Cleanup(void)
@@ -134,7 +135,7 @@ void Game::Update(float deltaT)
 {
     if (GameInput::IsPressed(GameInput::kMouse0) || GameInput::IsPressed(GameInput::kMouse1)) {
         // Make each pixel correspond to a quarter of a degree.
-        float dx = GameInput::GetAnalogInput(GameInput::kAnalogMouseX) - m_xLast;
+        float dx = m_xLast - GameInput::GetAnalogInput(GameInput::kAnalogMouseX);
         float dy = GameInput::GetAnalogInput(GameInput::kAnalogMouseY) - m_yLast;
 
         if (GameInput::IsPressed(GameInput::kMouse0))
@@ -214,3 +215,4 @@ void Game::RenderScene(void)
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 	gfxContext.Finish();
 }
+ 

@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Chapter4InitializeD3D12", "
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Chapter6DrawingInDirect3D", "..\Chapter6DrawingInDirect3D\Chapter6DrawingInDirect3D.vcxproj", "{6165BD2B-B33D-4483-B294-B328243CB746}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Chapter7DrawingInDirect3DPart2", "..\Chapter7DrawingInDirect3DPart2\Chapter7DrawingInDirect3DPart2.vcxproj", "{EF2BF27A-25D8-446B-9B60-035BC04C6A7E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{6165BD2B-B33D-4483-B294-B328243CB746}.Release|x64.Build.0 = Release|x64
 		{6165BD2B-B33D-4483-B294-B328243CB746}.Release|x86.ActiveCfg = Release|Win32
 		{6165BD2B-B33D-4483-B294-B328243CB746}.Release|x86.Build.0 = Release|Win32
+		{EF2BF27A-25D8-446B-9B60-035BC04C6A7E}.Debug|x64.ActiveCfg = Debug|x64
+		{EF2BF27A-25D8-446B-9B60-035BC04C6A7E}.Debug|x64.Build.0 = Debug|x64
+		{EF2BF27A-25D8-446B-9B60-035BC04C6A7E}.Debug|x86.ActiveCfg = Debug|Win32
+		{EF2BF27A-25D8-446B-9B60-035BC04C6A7E}.Debug|x86.Build.0 = Debug|Win32
+		{EF2BF27A-25D8-446B-9B60-035BC04C6A7E}.Release|x64.ActiveCfg = Release|x64
+		{EF2BF27A-25D8-446B-9B60-035BC04C6A7E}.Release|x64.Build.0 = Release|x64
+		{EF2BF27A-25D8-446B-9B60-035BC04C6A7E}.Release|x86.ActiveCfg = Release|Win32
+		{EF2BF27A-25D8-446B-9B60-035BC04C6A7E}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,4 @@
-#include "Game.h"
+#include "GameApp.h"
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	_In_ LPSTR lpCmdLine, _In_ int nShowCmd)
@@ -8,7 +8,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
-	Game* app = new Game();
+	GameApp* app = new GameApp();
 	GameCore::RunApplication(*app, L"DirectX12", hInstance, nShowCmd);
 	delete app;
 	return 0;

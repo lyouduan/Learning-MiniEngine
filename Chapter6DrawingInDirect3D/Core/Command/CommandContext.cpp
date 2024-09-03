@@ -51,8 +51,8 @@ CommandContext::CommandContext(D3D12_COMMAND_LIST_TYPE Type) :
     m_Type(Type),
     m_DynamicViewDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
     m_DynamicSamplerDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
-    m_CpuLinearAllocator(kCpuWritable),
-    m_GpuLinearAllocator(kGpuExclusive)
+    m_CpuLinearAllocator(kCpuWritable), /*upload buffer*/
+    m_GpuLinearAllocator(kGpuExclusive)/*default buffer*/
 {
     m_OwningManager = nullptr;
     m_CommandList = nullptr;
@@ -105,7 +105,9 @@ void CommandContext::InitializeBuffer(GpuBuffer& Dest, const void* Data, size_t 
 {
     CommandContext& InitContext = CommandContext::Begin();
 
+    // request a upload buffer
     DynAlloc mem = InitContext.ReserveUploadMemory(NumBytes);
+    // data copy to upload buffer
     SIMDMemCopy(mem.DataPtr, Data, Math::DivideByMultiple(NumBytes, 16));
 
     // copy data to the intermediate upload heap and then schedule a copy from the upload heap to default texture

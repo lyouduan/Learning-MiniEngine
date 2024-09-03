@@ -12,12 +12,12 @@ void GpuBuffer::Create(const std::wstring& name, uint32_t NumElements, uint32_t 
 	m_ElementSize = ElementSize;
 	m_BufferSize = NumElements * ElementSize;
 
-	D3D12_RESOURCE_DESC ResourceDEsc = DescribeBuffer();
+	D3D12_RESOURCE_DESC ResourceDEsc = DescribeBuffer(); // Buffer Desc
 
 	m_UsageState = D3D12_RESOURCE_STATE_COMMON;
 
 	D3D12_HEAP_PROPERTIES HeapProps;
-	HeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+	HeapProps.Type = D3D12_HEAP_TYPE_DEFAULT; // default heap for static data to optimize the performance
 	HeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 	HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 	HeapProps.CreationNodeMask = 1;
@@ -28,6 +28,8 @@ void GpuBuffer::Create(const std::wstring& name, uint32_t NumElements, uint32_t 
 
 	m_GpuVirtualAddress = m_pResource->GetGPUVirtualAddress();
 
+	// use data to initialize the buffer
+	// utilze the upload buffer to transfer the data to default buffer
 	if (initialData)
 		CommandContext::InitializeBuffer(*this, initialData, m_BufferSize);
 
@@ -36,7 +38,7 @@ void GpuBuffer::Create(const std::wstring& name, uint32_t NumElements, uint32_t 
 #else
 	m_pResource->SetName(name.c_str());
 #endif
-
+	// create the Buffer Views for reference
 	CreateDerivedViews();
 }
 
