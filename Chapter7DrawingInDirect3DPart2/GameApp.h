@@ -1,6 +1,8 @@
 #pragma once
 
 #include "GameCore.h"
+#include "RootSignature.h"
+
 
 class DepthBuffer;
 class GameApp : public GameCore::IGameApp
@@ -16,7 +18,9 @@ public:
 	virtual void RenderScene(void) override;
 
 private:
-	D3D12_VIEWPORT m_Viewport;
 
+	RootSignature m_RootSignature;
+
+	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;
 };

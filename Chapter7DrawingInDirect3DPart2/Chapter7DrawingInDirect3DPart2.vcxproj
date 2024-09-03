@@ -26,7 +26,7 @@
     <ClInclude Include="Core\Command\CommandAllocatorPool.h" />
     <ClInclude Include="Core\Command\CommandListManager.h" />
     <ClInclude Include="Core\Utils\d3dx12.h" />
-    <ClInclude Include="Core\Gamecore.h" />
+    <ClInclude Include="Core\GameCore.h" />
     <ClInclude Include="Core\Math\BoundingBox.h" />
     <ClInclude Include="Core\Math\BoundingPlane.h" />
     <ClInclude Include="Core\Math\BoundingSphere.h" />
@@ -50,6 +50,7 @@
     <ClInclude Include="Core\Resource\GpuResource.h" />
     <ClInclude Include="Core\Resource\GpuBuffer.h" />
     <ClInclude Include="Core\Resource\PixelBuffer.h" />
+    <ClInclude Include="Core\Command\RootSignature.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Core\Command\CommandContext.cpp" />
@@ -58,7 +59,7 @@
     <ClCompile Include="Core\Utils\Color.cpp" />
     <ClCompile Include="Core\Command\CommandAllocatorPool.cpp" />
     <ClCompile Include="Core\Command\CommandListManager.cpp" />
-    <ClCompile Include="Core\Gamecore.cpp" />
+    <ClCompile Include="Core\GameCore.cpp" />
     <ClCompile Include="Core\Math\BoundingSphere.cpp" />
     <ClCompile Include="Core\Math\Frustum.cpp" />
     <ClCompile Include="Core\Math\Random.cpp" />
@@ -72,6 +73,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Core\Utils\pch.cpp" />
     <ClCompile Include="Core\Resource\PixelBuffer.cpp" />
+    <ClCompile Include="Core\Command\RootSignature.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Core\Math\Functions.inl" />
@@ -136,6 +138,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>Core; Core/Resource;Core/Utils;Core/Command;</AdditionalIncludeDirectories>
+      <AdditionalOptions>/arch:AVX %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -152,6 +155,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>Core; Core/Resource;Core/Utils;Core/Command;</AdditionalIncludeDirectories>
+      <AdditionalOptions>/arch:AVX %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -168,6 +172,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>Core; Core/Resource;Core/Utils;Core/Command;</AdditionalIncludeDirectories>
+      <AdditionalOptions>/arch:AVX %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -184,6 +189,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>Core; Core/Resource;Core/Utils;Core/Command;</AdditionalIncludeDirectories>
+      <AdditionalOptions>/arch:AVX %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

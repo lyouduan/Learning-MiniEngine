@@ -319,6 +319,17 @@ void GraphicsContext::ClearDepthAndStencil(DepthBuffer& Target)
     m_CommandList->ClearDepthStencilView(Target.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, Target.GetClearDepth(), Target.GetClearStencil(), 0, nullptr);
 }
 
+void GraphicsContext::SetRootSignature(const RootSignature& RootSig)
+{
+    // return if same as the current root signature
+    if (RootSig.GetSignature() == m_CurGraphicsRootSignature)
+        return;
+    m_CurGraphicsRootSignature = RootSig.GetSignature();
+    m_CommandList->SetGraphicsRootSignature(RootSig.GetSignature());
+
+
+}
+
 void GraphicsContext::SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[])
 {
     m_CommandList->OMSetRenderTargets(NumRTVs, RTVs, FALSE, nullptr);

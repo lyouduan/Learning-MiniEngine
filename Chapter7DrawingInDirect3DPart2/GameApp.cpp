@@ -23,6 +23,8 @@ GameApp::GameApp(void)
 }
 void GameApp::Startup(void)
 {
+	// initialize root signature
+	m_RootSignature.Reset(0, 0);
 
 }
 
@@ -43,6 +45,7 @@ void GameApp::RenderScene(void)
 
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 	gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+
 	// clear dsv
 	gfxContext.ClearDepth(g_SceneDepthBuffer);
 	
@@ -50,8 +53,12 @@ void GameApp::RenderScene(void)
 	g_DisplayPlane[g_CurrentBuffer].SetClearColor(Color{ 0.2f, 0.4f, 0.6f, 1.0f });
 	gfxContext.ClearColor(g_DisplayPlane[g_CurrentBuffer]);
 	
-	gfxContext.SetRenderTarget(g_DisplayPlane[g_CurrentBuffer].GetRTV(), g_SceneDepthBuffer.GetDSV());
+	//set root signature
+	gfxContext.SetRootSignature(m_RootSignature);
 
+	// set render target
+	gfxContext.SetRenderTarget(g_DisplayPlane[g_CurrentBuffer].GetRTV(), g_SceneDepthBuffer.GetDSV());
+	
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 
 	gfxContext.Finish();

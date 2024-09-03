@@ -5,6 +5,7 @@
 #include "GpuResource.h"
 #include "ColorBuffer.h"
 #include "DepthBuffer.h"
+#include "RootSignature.h"
 
 #include <vector>
 #include <queue>
@@ -95,8 +96,10 @@ protected:
 	void BindDescriptorHeaps(void);
 
 	CommandListManager* m_OwningManager;
-	ID3D12GraphicsCommandList* m_CommandList;
-	ID3D12CommandAllocator* m_CurrentAllocator;
+	ID3D12GraphicsCommandList* m_CommandList; // graphics commandlist
+	ID3D12CommandAllocator* m_CurrentAllocator; // commandallocator
+
+	ID3D12RootSignature* m_CurGraphicsRootSignature; // root signature
 
 	D3D12_RESOURCE_BARRIER m_ResourceBarrierBuffer[16];
 	UINT m_NumBarriersToFlush;
@@ -123,6 +126,7 @@ public:
 	void ClearStencil(DepthBuffer& Target);
 	void ClearDepthAndStencil(DepthBuffer& Target);
 
+	void SetRootSignature(const RootSignature& RootSig);
 
 	void SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[]);
 	void SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[], D3D12_CPU_DESCRIPTOR_HANDLE DSV);

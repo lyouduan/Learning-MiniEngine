@@ -1,4 +1,3 @@
-#if 0
 #pragma once
 #include "pch.h"
 #include "GraphicsCore.h"
@@ -422,4 +421,3 @@ inline void GraphicsContext::SetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY Topol
 	m_CommandList->IASetPrimitiveTopology(Topology);
 }
 
-#endif
