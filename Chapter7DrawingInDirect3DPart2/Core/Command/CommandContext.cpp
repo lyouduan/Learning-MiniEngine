@@ -109,6 +109,7 @@ void CommandContext::InitializeBuffer(GpuBuffer& Dest, const void* Data, size_t 
     DynAlloc mem = InitContext.ReserveUploadMemory(NumBytes);
     // data copy to upload buffer
     SIMDMemCopy(mem.DataPtr, Data, Math::DivideByMultiple(NumBytes, 16));
+    //memcpy(mem.DataPtr, Data, NumBytes);
 
     // copy data to the intermediate upload heap and then schedule a copy from the upload heap to default texture
     InitContext.TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST, true);

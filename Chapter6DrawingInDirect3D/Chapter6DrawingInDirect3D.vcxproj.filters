@@ -108,7 +108,7 @@
     <ClInclude Include="Core\GameCore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Core\GameInput.h">
+    <ClInclude Include="Core\Utils\GameInput.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Core\GraphicsCommon.h">

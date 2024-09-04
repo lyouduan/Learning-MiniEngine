@@ -1,3 +1,10 @@
+struct PassConstants
+{
+    matrix MVP;
+};
+
+ConstantBuffer<PassConstants> passConstants : register(b0);
+
 struct VertexIn
 {
     float3 position : POSITION;
@@ -14,7 +21,7 @@ VertexOut main(VertexIn input)
 {
     VertexOut output;
     
-    output.position = float4(input.position, 1.0);
+    output.position = mul(passConstants.MVP, float4(input.position, 1.0));
     output.color = input.color;
     
     return output;

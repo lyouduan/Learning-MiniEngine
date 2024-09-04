@@ -35,4 +35,15 @@ private:
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;
 	float m_aspectRatio;
+
+	DirectX::XMMATRIX m_MVP;
+	float m_radius = 5.0f;
+	// x方向弧度
+	float m_xRotate = 0.0f;
+	float m_xLast = 0.0f;
+	float m_xDiff = 0.0f;
+	// y方向弧度
+	float m_yRotate = 0.0f;
+	float m_yLast = 0.0f;
+	float m_yDiff = 0.0f;
 };

@@ -25,7 +25,7 @@
     <ClInclude Include="Core\d3dx12.h" />
     <ClInclude Include="Core\Display.h" />
     <ClInclude Include="Core\GameCore.h" />
-    <ClInclude Include="Core\GameInput.h" />
+    <ClInclude Include="Core\Utils\GameInput.h" />
     <ClInclude Include="Core\GraphicsCommon.h" />
     <ClInclude Include="Core\GraphicsCore.h" />
     <ClInclude Include="Core\Math\BoundingBox.h" />

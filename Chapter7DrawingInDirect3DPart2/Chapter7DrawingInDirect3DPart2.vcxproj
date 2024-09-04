@@ -40,6 +40,7 @@
     <ClInclude Include="Core\Math\Scalar.h" />
     <ClInclude Include="Core\Math\Transform.h" />
     <ClInclude Include="Core\Math\Vector.h" />
+    <ClInclude Include="Core\Utils\GameInput.h" />
     <ClInclude Include="Core\Utils\Hash.h" />
     <ClInclude Include="Core\Utils\pch.h" />
     <ClInclude Include="Core\Utils\Utility.h" />
@@ -69,6 +70,7 @@
     <ClCompile Include="Core\Math\BoundingSphere.cpp" />
     <ClCompile Include="Core\Math\Frustum.cpp" />
     <ClCompile Include="Core\Math\Random.cpp" />
+    <ClCompile Include="Core\Utils\GameInput.cpp" />
     <ClCompile Include="Core\Utils\Utility.cpp" />
     <ClCompile Include="Core\GraphicsCore.cpp" />
     <ClCompile Include="Core\Display.cpp" />

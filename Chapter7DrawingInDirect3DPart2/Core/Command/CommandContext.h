@@ -369,7 +369,6 @@ inline void GraphicsContext::SetDynamicConstantBufferView( UINT RootIndex, size_
     m_CommandList->SetGraphicsRootConstantBufferView(RootIndex, cb.GpuAddress);
 }
 
-
 inline void GraphicsContext::SetConstantArray(UINT RootIndex, UINT NumConstants, const void* pConstants)
 {
 	m_CommandList->SetGraphicsRoot32BitConstants(RootIndex, NumConstants, pConstants, 0);

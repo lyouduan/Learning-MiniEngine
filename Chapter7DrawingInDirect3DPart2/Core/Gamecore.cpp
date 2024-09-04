@@ -2,25 +2,36 @@
 #include "GameCore.h"
 #include "GraphicsCore.h"
 #include "Display.h"
+#include "GameInput.h"
+#include "CommandListManager.h"
 
 namespace GameCore
 {
+    using namespace Graphics;
+
     void InitializeApplication(IGameApp& game)
     {
         Graphics::Initialize();
+        GameInput::Initialize();
 
         game.Startup();
     }
 
     void TerminateApplication(IGameApp& game)
     {
+        g_CommandManager.IdleGPU();
+
         game.Cleanup();
+
+        GameInput::Shutdown();
     }
 
     void UpdateApplication(IGameApp& game)
     {
         game.Update(0);
         game.RenderScene();
+        GameInput::Update(0);
+
 
         Display::Present();
     }
