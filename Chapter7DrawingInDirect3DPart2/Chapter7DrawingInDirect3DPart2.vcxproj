@@ -48,10 +48,12 @@
     <ClInclude Include="Core\Resource\DepthBuffer.h" />
     <ClInclude Include="GameApp.h" />
     <ClInclude Include="Core\Resource\GpuResource.h" />
-    <ClInclude Include="Core\Resource\GpuBuffer.h" />
     <ClInclude Include="Core\Resource\PixelBuffer.h" />
     <ClInclude Include="Core\Command\RootSignature.h" />
     <ClInclude Include="Core\Command\PipelineState.h" />
+    <ClInclude Include="Core\Resource\GpuBuffer.h" />
+    <ClInclude Include="Core\Resource\LinearAllocator.h" />
+    <ClInclude Include="Core\Resource\UploadBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Core\Command\CommandContext.cpp" />
@@ -71,11 +73,13 @@
     <ClCompile Include="Core\Resource\DepthBuffer.cpp" />
     <ClCompile Include="GameApp.cpp" />
     <ClCompile Include="Core\Resource\GpuBuffer.cpp" />
+    <ClCompile Include="Core\Resource\LinearAllocator.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Core\Utils\pch.cpp" />
     <ClCompile Include="Core\Resource\PixelBuffer.cpp" />
     <ClCompile Include="Core\Command\RootSignature.cpp" />
     <ClCompile Include="Core\Command\PipelineState.cpp" />
+    <ClCompile Include="Core\Resource\UploadBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Core\Math\Functions.inl" />

@@ -6,6 +6,9 @@
 #include "ColorBuffer.h"
 #include "DepthBuffer.h"
 #include "RootSignature.h"
+#include "LinearAllocator.h"
+#include "PipelineState.h"
+#include "UploadBuffer.h"
 
 #include <vector>
 #include <queue>
@@ -82,6 +85,19 @@ public:
 
 	inline void CopySubresource(GpuResource& Dest, UINT DestSubIndex, GpuResource& Src, UINT SrcSubIndex);
 
+	// allocate the upload heap
+	DynAlloc ReserveUploadMemory(size_t SizeInBytes)
+	{
+		return m_CpuLinearAllocator.Allocate(SizeInBytes);
+	}
+
+	// initialize buffer
+	//static void InitializeTexture(GpuResource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA SubData[]);
+	static void InitializeBuffer(GpuBuffer& Dest, const void* Data, size_t NumBytes, size_t DestOffset = 0);
+	static void InitializeBuffer(GpuBuffer& Dest, const UploadBuffer& Src, size_t SrcOffset, size_t NumBytes = -1, size_t DestOffset = 0);
+	//static void InitializeTextureArraySlice(GpuResource& Dest, UINT SliceIndex, GpuResource& Src);
+
+
 	void TransitionResource(GpuResource& Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
 	void BeginResourceTransition(GpuResource& Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
 	void InsertUAVBarrier(GpuResource& Resource, bool FlushImmediate = false);
@@ -90,6 +106,8 @@ public:
 
 	void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12DescriptorHeap* HeapPtr);
 	void SetDescriptorHeaps(UINT HeapCount, D3D12_DESCRIPTOR_HEAP_TYPE Type[], ID3D12DescriptorHeap* HeapPtrs[]);
+	
+	inline void SetPipelineState(const PSO& PSO);
 
 protected:
 
@@ -100,11 +118,15 @@ protected:
 	ID3D12CommandAllocator* m_CurrentAllocator; // commandallocator
 
 	ID3D12RootSignature* m_CurGraphicsRootSignature; // root signature
+	ID3D12PipelineState* m_CurPipelineState;
 
 	D3D12_RESOURCE_BARRIER m_ResourceBarrierBuffer[16];
 	UINT m_NumBarriersToFlush;
 
 	ID3D12DescriptorHeap* m_CurrentDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+
+	LinearAllocator m_CpuLinearAllocator;
+	LinearAllocator m_GpuLinearAllocator;
 
 	std::wstring m_ID;
 	void SetID(const std::wstring& ID) { m_ID = ID; }
@@ -141,8 +163,6 @@ public:
 	void SetViewportAndScissor(const D3D12_VIEWPORT& vp, const D3D12_RECT& rect);
 	void SetViewportAndScissor(UINT x, UINT y, UINT w, UINT h);
 
-
 private:
-
 
 };

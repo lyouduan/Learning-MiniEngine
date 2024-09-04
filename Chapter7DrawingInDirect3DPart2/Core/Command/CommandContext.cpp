@@ -3,21 +3,24 @@
 #include "CommandListManager.h"
 #include "CommandAllocatorPool.h"
 #include "GpuResource.h"
+#include "LinearAllocator.h"
+#include "UploadBuffer.h"
 
 using namespace Graphics;
 
 CommandContext::CommandContext(D3D12_COMMAND_LIST_TYPE Type) :
-    m_Type(Type)/*,
-    m_DynamicViewDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
-    m_DynamicSamplerDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
+    m_Type(Type),
+    /* m_DynamicViewDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
+    m_DynamicSamplerDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),*/
     m_CpuLinearAllocator(kCpuWritable),
-    m_GpuLinearAllocator(kGpuExclusive)*/
+    m_GpuLinearAllocator(kGpuExclusive)
 {
     m_CommandList = nullptr;
     m_CurrentAllocator = nullptr;
     ZeroMemory(m_CurrentDescriptorHeaps, sizeof(m_CurrentDescriptorHeaps));
 
-
+    m_CurGraphicsRootSignature = nullptr;
+    m_CurPipelineState = nullptr;
     m_NumBarriersToFlush = 0;
 }
 
@@ -140,6 +143,39 @@ inline void CommandContext::CopySubresource(GpuResource& Dest, UINT DestSubIndex
     };
 
     m_CommandList->CopyTextureRegion(&DestLocation, 0, 0, 0, &SrcLocation, nullptr);
+}
+
+void CommandContext::InitializeBuffer(GpuBuffer& Dest, const void* Data, size_t NumBytes, size_t DestOffset)
+{
+    CommandContext& InitContext = CommandContext::Begin();
+
+    // request a upload heap
+    DynAlloc uploadBuffer = InitContext.ReserveUploadMemory(NumBytes);
+    // copy data to the intermediate upload heap
+    SIMDMemCopy(uploadBuffer.DataPtr, Data, Math::DivideByMultiple(NumBytes, 16));
+    // and then schedule a copy from the upload heap to the default texture
+    InitContext.TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST, true);
+    InitContext.m_CommandList->CopyBufferRegion(Dest.GetResource(), DestOffset, uploadBuffer.Buffer.GetResource(), 0, NumBytes);
+    InitContext.TransitionResource(Dest, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+
+    // Execute the command list and wait for it to finish so we can release the upload buffer
+    InitContext.Finish(true);
+}
+
+void CommandContext::InitializeBuffer(GpuBuffer& Dest, const UploadBuffer& Src, size_t SrcOffset, size_t NumBytes, size_t DestOffset)
+{
+    CommandContext& InitContext = CommandContext::Begin();
+
+    size_t MaxBytes = std::min<size_t>(Dest.GetBufferSize() - DestOffset, Src.GetBufferSize() - SrcOffset);
+    NumBytes = std::min<size_t>(MaxBytes, NumBytes);
+
+    // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default texture
+    InitContext.TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST, true);
+    InitContext.m_CommandList->CopyBufferRegion(Dest.GetResource(), DestOffset, (ID3D12Resource*)Src.GetResource(), SrcOffset, NumBytes);
+    InitContext.TransitionResource(Dest, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+
+    // Execute the command list and wait for it to finish so we can release the upload buffer
+    InitContext.Finish(true);
 }
 
 void CommandContext::TransitionResource(GpuResource& Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
@@ -289,6 +325,16 @@ void CommandContext::BindDescriptorHeaps(void)
         m_CommandList->SetDescriptorHeaps(NonNullHeaps, HeapsToBind);
 }
 
+inline void CommandContext::SetPipelineState(const PSO& PSO)
+{
+    ID3D12PipelineState* PipelineState = PSO.GetPipelineStateObject();
+    if (PipelineState == m_CurPipelineState)
+        return;
+
+    m_CommandList->SetPipelineState(PipelineState);
+    m_CurPipelineState = PipelineState;
+}
+
 void GraphicsContext::ClearColor(ColorBuffer& Target, D3D12_RECT* Rect)
 {
     FlushResourceBarriers();
@@ -326,7 +372,6 @@ void GraphicsContext::SetRootSignature(const RootSignature& RootSig)
         return;
     m_CurGraphicsRootSignature = RootSig.GetSignature();
     m_CommandList->SetGraphicsRootSignature(RootSig.GetSignature());
-
 
 }
 

@@ -3,6 +3,8 @@
 #include "GameCore.h"
 #include "RootSignature.h"
 #include "PipelineState.h"
+#include "GpuBuffer.h"
+#include <DirectXMath.h>
 
 class DepthBuffer;
 class GameApp : public GameCore::IGameApp
@@ -22,6 +24,15 @@ private:
 	RootSignature m_RootSignature;
 	GraphicsPSO m_PSO;
 
+	struct Vertex {
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT4 color;
+	};
+
+	StructuredBuffer m_VertexBuffer;
+	ByteAddressBuffer m_IndexBuffer;
+
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;
+	float m_aspectRatio;
 };
