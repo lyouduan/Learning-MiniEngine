@@ -4,6 +4,7 @@
 #include "CommandContext.h"
 #include "Display.h"
 #include "BufferManager.h"
+#include "GraphicsCommon.h"
 
 namespace Graphics
 {
@@ -207,6 +208,9 @@ void Graphics::Initialize(bool RequireDXRSupport)
     // create commandQueue,commandAllocator, commandList
     //
     g_CommandManager.Create(g_Device);
+
+    // init pso desc
+    InitializeCommonState();
 
     //
     // create swapchain and RTV

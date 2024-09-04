@@ -131,6 +131,24 @@ D3D12_CPU_DESCRIPTOR_HANDLE GpuBuffer::CreateConstantBufferView(uint32_t Offset,
 	return hCBV;
 }
 
+D3D12_VERTEX_BUFFER_VIEW GpuBuffer::VertexBufferView(size_t Offset, uint32_t Size, uint32_t Stride) const
+{
+	D3D12_VERTEX_BUFFER_VIEW VBView;
+	VBView.BufferLocation = m_GpuVirtualAddress + Offset;
+	VBView.SizeInBytes = Size;
+	VBView.StrideInBytes = Stride;
+	return VBView;
+}
+
+D3D12_INDEX_BUFFER_VIEW GpuBuffer::IndexBufferView(size_t Offset, uint32_t Size, bool b32Bit) const
+{
+	D3D12_INDEX_BUFFER_VIEW IBView;
+	IBView.BufferLocation = m_GpuVirtualAddress + Offset;
+	IBView.Format = b32Bit ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
+	IBView.SizeInBytes = Size;
+	return IBView;
+}
+
 void ByteAddressBuffer::CreateDerivedViews(void)
 {
 	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};

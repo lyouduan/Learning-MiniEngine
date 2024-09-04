@@ -2,17 +2,17 @@
 
 #include "pch.h"
 
-#include <d3dcompiler.h>
-
-class RootSignature;
 class CommandContext;
+class RootSignature;
 
 class PSO
 {
 public:
-	PSO(const wchar_t* Name) : m_Name(Name), m_RootSignature(nullptr), m_PSO(nullptr) {}
+	PSO(const wchar_t* Name) : m_Name(Name), m_RootSignature(nullptr), m_PSO(nullptr)
+	{
+	}
 
-	static void DesytroyAll(void);
+	static void DestroyAll(void);
 
 	void SetRootSignature(const RootSignature& BindMappings)
 	{
@@ -26,10 +26,11 @@ public:
 	}
 
 	ID3D12PipelineState* GetPipelineStateObject(void) const { return m_PSO; }
+
 protected:
 
 	const wchar_t* m_Name;
-	
+
 	const RootSignature* m_RootSignature;
 
 	ID3D12PipelineState* m_PSO;
@@ -42,7 +43,6 @@ class GraphicsPSO : public PSO
 
 public:
 
-	// start with empty state
 	GraphicsPSO(const wchar_t* Name = L"Unnamed Graphics PSO");
 
 	void SetBlendState(const D3D12_BLEND_DESC& BlendDesc);
@@ -56,6 +56,7 @@ public:
 	void SetInputLayout(UINT NumElements, const D3D12_INPUT_ELEMENT_DESC* pInputElementDescs);
 	void SetPrimitiveRestart(D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBProps);
 
+	// set the shdaer state
 	// These const_casts shouldn't be necessary, but we need to fix the API to accept "const void* pShaderBytecode"
 	void SetVertexShader(const void* Binary, size_t Size) { m_PSODesc.VS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
 	void SetPixelShader(const void* Binary, size_t Size) { m_PSODesc.PS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
@@ -69,17 +70,19 @@ public:
 	void SetHullShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.HS = Binary; }
 	void SetDomainShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.DS = Binary; }
 
-	void SetVertexShader(const Microsoft::WRL::ComPtr<ID3DBlob>& Binary) { 
-		m_PSODesc.VS = CD3DX12_SHADER_BYTECODE(static_cast<void*>(Binary->GetBufferPointer()), Binary->GetBufferSize()); }
-	void SetPixelShader(const Microsoft::WRL::ComPtr<ID3DBlob>& Binary) { 
-		m_PSODesc.PS = CD3DX12_SHADER_BYTECODE(static_cast<void*>(Binary->GetBufferPointer()), Binary->GetBufferSize()); }
+	void SetVertexShader(const Microsoft::WRL::ComPtr<ID3DBlob>& Binary) {
+		m_PSODesc.VS = CD3DX12_SHADER_BYTECODE(static_cast<void*>(Binary->GetBufferPointer()), Binary->GetBufferSize());
+	}
+	void SetPixelShader(const Microsoft::WRL::ComPtr<ID3DBlob>& Binary) {
+		m_PSODesc.PS = CD3DX12_SHADER_BYTECODE(static_cast<void*>(Binary->GetBufferPointer()), Binary->GetBufferSize());
+	}
 
 	// Perform validation and compute a hash value for fast state block comparisons
 	void Finalize();
 
 private:
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC m_PSODesc;
+
 	std::shared_ptr<const D3D12_INPUT_ELEMENT_DESC> m_InputLayouts;
-
 };
-

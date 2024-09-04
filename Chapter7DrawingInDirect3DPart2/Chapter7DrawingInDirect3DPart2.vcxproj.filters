@@ -120,6 +120,12 @@
     <ClInclude Include="Core\Resource\UploadBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Core\Utils\Hash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\GraphicsCommon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Core\GameCore.cpp">
@@ -194,10 +200,17 @@
     <ClCompile Include="Core\Resource\UploadBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Core\GraphicsCommon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Core\Math\Functions.inl">
       <Filter>Header Files</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="shader\VertexShader.hlsl" />
+    <FxCompile Include="shader\PixelShader.hlsl" />
   </ItemGroup>
 </Project>

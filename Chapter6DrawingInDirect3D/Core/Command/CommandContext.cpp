@@ -3,7 +3,7 @@
 #include "GpuResource.h"
 #include "GraphicsCore.h"
 #include "CommandListManager.h"
-#include "PipelineSate.h"
+#include "PipelineState.h"
 #include "RootSignature.h"
 
 using namespace Graphics;
@@ -213,6 +213,16 @@ void CommandContext::FlushResourceBarriers(void)
     }
 }
 
+void CommandContext::SetPipelineState(const PSO& PSO)
+{
+    ID3D12PipelineState* PipelineState = PSO.GetPipelineStateObject();
+    if (PipelineState == m_CurPipelineState)
+        return;
+
+    m_CommandList->SetPipelineState(PipelineState);
+    m_CurPipelineState = PipelineState;
+}
+
 void CommandContext::SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12DescriptorHeap* HeapPtr)
 {
     if (m_CurrentDescriptorHeaps[Type] != HeapPtr)
@@ -237,16 +247,6 @@ void CommandContext::SetDescriptorHeaps(UINT HeapCount, D3D12_DESCRIPTOR_HEAP_TY
 
     if (AnyChanged)
         BindDescriptorHeaps();
-}
-
-void CommandContext::SetPipelineState(const PSO& PSO)
-{
-    ID3D12PipelineState* PipelineState = PSO.GetPipelineStateObject();
-    if (PipelineState == m_CurPipelineState)
-        return;
-
-    m_CommandList->SetPipelineState(PipelineState);
-    m_CurPipelineState = PipelineState;
 }
 
 void CommandContext::SetPredication(ID3D12Resource* Buffer, UINT64 BufferOffset, D3D12_PREDICATION_OP Op)

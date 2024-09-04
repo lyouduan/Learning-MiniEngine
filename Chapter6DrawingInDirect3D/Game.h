@@ -1,7 +1,7 @@
 #pragma once
 #include "GameCore.h"
 #include "RootSignature.h"
-#include "PipelineSate.h"
+#include "PipelineState.h"
 #include "GpuBuffer.h"
 #include "GraphicsCommon.h"
 #include "Color.h"

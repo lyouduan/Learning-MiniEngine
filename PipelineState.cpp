@@ -1,20 +1,21 @@
-#include "PipelineSate.h"
-#include "GraphicsCore.h"
+#include "pch.h"
+#include "PipelineState.h"
 #include "RootSignature.h"
+#include "GraphicsCore.h"
 #include "Hash.h"
-
-#include <mutex>
 #include <map>
+#include <thread>
+#include <mutex>
 
 using Math::IsAligned;
 using namespace Graphics;
 using Microsoft::WRL::ComPtr;
 using namespace std;
+
 static map< size_t, ComPtr<ID3D12PipelineState> > s_GraphicsPSOHashMap;
 static map< size_t, ComPtr<ID3D12PipelineState> > s_ComputePSOHashMap;
 
-
-void PSO::DesytroyAll(void)
+void PSO::DestroyAll(void)
 {
 	s_GraphicsPSOHashMap.clear();
 	s_ComputePSOHashMap.clear();
@@ -23,6 +24,7 @@ void PSO::DesytroyAll(void)
 GraphicsPSO::GraphicsPSO(const wchar_t* Name)
 	: PSO(Name)
 {
+	// init the pso Desc
 	ZeroMemory(&m_PSODesc, sizeof(m_PSODesc));
 	m_PSODesc.NodeMask = 1;
 	m_PSODesc.SampleMask = 0xFFFFFFFFu;
@@ -34,7 +36,6 @@ void GraphicsPSO::SetBlendState(const D3D12_BLEND_DESC& BlendDesc)
 {
 	m_PSODesc.BlendState = BlendDesc;
 }
-
 void GraphicsPSO::SetRasterizerState(const D3D12_RASTERIZER_DESC& RasterizerDesc)
 {
 	m_PSODesc.RasterizerState = RasterizerDesc;
@@ -61,52 +62,13 @@ void GraphicsPSO::SetPrimitiveRestart(D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBProps
 	m_PSODesc.IBStripCutValue = IBProps;
 }
 
-void GraphicsPSO::SetDepthTargetFormat(DXGI_FORMAT DSVFormat, UINT MsaaCount, UINT MsaaQuality)
-{
-	SetRenderTargetFormats(0, nullptr, DSVFormat, MsaaCount, MsaaQuality);
-}
-
-void GraphicsPSO::SetRenderTargetFormat(DXGI_FORMAT RTVFormat, DXGI_FORMAT DSVFormat, UINT MsaaCount, UINT MsaaQuality)
-{
-	SetRenderTargetFormats(1, &RTVFormat, DSVFormat, MsaaCount, MsaaQuality);
-}
-
-void GraphicsPSO::SetRenderTargetFormats(UINT NumRTVs, const DXGI_FORMAT* RTVFormats, DXGI_FORMAT DSVFormat, UINT MsaaCount, UINT MsaaQuality)
-{
-	ASSERT(NumRTVs == 0 || RTVFormats != nullptr, "Null format array conflicts with non-zero length");
-	for (UINT i = 0; i < NumRTVs; ++i)
-	{
-		ASSERT(RTVFormats[i] != DXGI_FORMAT_UNKNOWN);
-		m_PSODesc.RTVFormats[i] = RTVFormats[i];
-	}
-	for (UINT i = NumRTVs; i < m_PSODesc.NumRenderTargets; ++i)
-		m_PSODesc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
-	m_PSODesc.NumRenderTargets = NumRTVs;
-	m_PSODesc.DSVFormat = DSVFormat;
-	m_PSODesc.SampleDesc.Count = MsaaCount;
-	m_PSODesc.SampleDesc.Quality = MsaaQuality;
-}
-
-void GraphicsPSO::SetInputLayout(UINT NumElements, const D3D12_INPUT_ELEMENT_DESC* pInputElementDescs)
-{
-	m_PSODesc.InputLayout.NumElements = NumElements;
-
-	if (NumElements > 0)
-	{
-		D3D12_INPUT_ELEMENT_DESC* NewElements = (D3D12_INPUT_ELEMENT_DESC*)malloc(sizeof(D3D12_INPUT_ELEMENT_DESC) * NumElements);
-		memcpy(NewElements, pInputElementDescs, NumElements * sizeof(D3D12_INPUT_ELEMENT_DESC));
-		m_InputLayouts.reset((const D3D12_INPUT_ELEMENT_DESC*)NewElements);
-	}
-	else
-		m_InputLayouts = nullptr;
-}
-
 void GraphicsPSO::Finalize()
 {
-	// make sure the root signature is finalized first
+	// make sure the root signature is finalize first
 	m_PSODesc.pRootSignature = m_RootSignature->GetSignature();
 	ASSERT(m_PSODesc.pRootSignature != nullptr);
 
+	// calculate the hash code
 	m_PSODesc.InputLayout.pInputElementDescs = nullptr;
 	size_t HashCode = Utility::HashState(&m_PSODesc);
 	HashCode = Utility::HashState(m_InputLayouts.get(), m_PSODesc.InputLayout.NumElements, HashCode);
@@ -115,10 +77,12 @@ void GraphicsPSO::Finalize()
 	ID3D12PipelineState** PSORef = nullptr;
 	bool firstCompile = false;
 	{
-		static mutex s_HashMapMutex;
-		lock_guard<mutex> CS(s_HashMapMutex);
+		static std::mutex s_HashMapMutex;
+		std::lock_guard<std::mutex> CS(s_HashMapMutex);
+
 		auto iter = s_GraphicsPSOHashMap.find(HashCode);
 
+		// Reserve space so the next inquiry will find that someone got here first.
 		if (iter == s_GraphicsPSOHashMap.end())
 		{
 			firstCompile = true;
@@ -127,7 +91,7 @@ void GraphicsPSO::Finalize()
 		else
 			PSORef = iter->second.GetAddressOf();
 	}
-	
+
 	if (firstCompile)
 	{
 		//ASSERT(m_PSODesc.DepthStencilState.DepthEnable != (m_PSODesc.DSVFormat == DXGI_FORMAT_UNKNOWN));
@@ -143,3 +107,47 @@ void GraphicsPSO::Finalize()
 	}
 
 }
+
+void GraphicsPSO::SetDepthTargetFormat(DXGI_FORMAT DSVFormat, UINT MsaaCount, UINT MsaaQuality)
+{
+	SetRenderTargetFormats(0, nullptr, DSVFormat, MsaaCount, MsaaQuality);
+}
+
+void GraphicsPSO::SetRenderTargetFormat(DXGI_FORMAT RTVFormat, DXGI_FORMAT DSVFormat, UINT MsaaCount, UINT MsaaQuality)
+{
+	SetRenderTargetFormats(1, &RTVFormat, DSVFormat, MsaaCount, MsaaQuality);
+}
+
+void GraphicsPSO::SetRenderTargetFormats(UINT NumRTVs, const DXGI_FORMAT* RTVFormats, DXGI_FORMAT DSVFormat, UINT MsaaCount, UINT MsaaQuality)
+{
+	ASSERT(NumRTVs ==0 || RTVFormats != nullptr, "Null format array conflicts with non-zero length");
+	for (UINT i = 0; i < NumRTVs; ++i)
+	{
+		ASSERT(RTVFormats[i] != DXGI_FORMAT_UNKNOWN);
+		m_PSODesc.RTVFormats[i] = RTVFormats[i];
+	}
+
+	for (UINT i = NumRTVs; i < m_PSODesc.NumRenderTargets; ++i)
+		m_PSODesc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+
+	m_PSODesc.NumRenderTargets = NumRTVs;
+	m_PSODesc.DSVFormat = DSVFormat;
+	m_PSODesc.SampleDesc.Count = MsaaCount;
+	m_PSODesc.SampleDesc.Quality = MsaaQuality;
+}
+
+void GraphicsPSO::SetInputLayout(UINT NumElements, const D3D12_INPUT_ELEMENT_DESC* pInputElementDescs)
+{
+	m_PSODesc.InputLayout.NumElements = NumElements;
+
+	// set the size of m_InputLayouts
+	if (NumElements > 0)
+	{
+		D3D12_INPUT_ELEMENT_DESC* NewElements = (D3D12_INPUT_ELEMENT_DESC*)malloc(sizeof(D3D12_INPUT_ELEMENT_DESC) * NumElements);
+		memcpy(NewElements, pInputElementDescs, NumElements * sizeof(D3D12_INPUT_ELEMENT_DESC));
+		m_InputLayouts.reset((const D3D12_INPUT_ELEMENT_DESC*)NewElements);
+	}
+	else
+		m_InputLayouts = nullptr;
+}
+
