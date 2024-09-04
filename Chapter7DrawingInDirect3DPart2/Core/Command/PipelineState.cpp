@@ -1,4 +1,4 @@
-#include "PipelineSate.h"
+#include "PipelineState.h"
 #include "GraphicsCore.h"
 #include "RootSignature.h"
 #include "Hash.h"
