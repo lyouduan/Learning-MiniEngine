@@ -1,6 +1,9 @@
 #pragma once
 #include <DirectXMath.h>
 #include <string>
+#include "GpuBuffer.h"
+
+
 
 struct Material
 {
@@ -14,6 +17,25 @@ struct Material
 struct Vertex {
 	DirectX::XMFLOAT3 position;
 	DirectX::XMFLOAT3 normal;
+};
+
+struct SubmeshGeometry
+{
+	UINT IndexCount = 0;
+	UINT StartIndexLocation = 0;
+	INT BaseVertexLocation = 0;
+	
+};
+
+struct MeshGeometry
+{
+	std::string name;
+
+	// buffer
+	StructuredBuffer m_VertexBuffer;
+	ByteAddressBuffer m_IndexBuffer;
+
+	std::unordered_map<std::string, SubmeshGeometry> DrawArgs;
 };
 
 // shader constants

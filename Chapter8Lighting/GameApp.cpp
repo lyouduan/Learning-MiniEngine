@@ -41,6 +41,11 @@ void GameApp::Startup(void)
 	// prepare shape and add material
 	BuildLandGeometry();
 	BuildWavesGeometry();
+	BuildShapeGeometry();
+
+	// build render items
+	BuildLandRenderItems();
+	BuildShapeRenderItems();
 
 	// initialize root signature
 	m_RootSignature.Reset(3, 0);
@@ -80,15 +85,24 @@ void GameApp::Startup(void)
 
 void GameApp::Cleanup(void)
 {
-	for (auto& iter : m_AllRenders)
+	for (auto& iter : m_ShapeRenders)
 	{
-		iter->m_VertexBuffer.Destroy();
-		iter->m_IndexBuffer.Destroy();
+		iter->Geo->m_VertexBuffer.Destroy();
+		iter->Geo->m_IndexBuffer.Destroy();
+	}
+
+	for (auto& iter : m_LandRenders)
+	{
+		iter->Geo->m_VertexBuffer.Destroy();
+		iter->Geo->m_IndexBuffer.Destroy();
 	}
 }
 
 void GameApp::Update(float deltaT)
 {
+	if (GameInput::IsFirstPressed(GameInput::kKey_f1))
+		m_bRenderShapes = !m_bRenderShapes;
+
 	if (GameInput::IsPressed(GameInput::kMouse0) || GameInput::IsPressed(GameInput::kMouse1)) {
 		// Make each pixel correspond to a quarter of a degree.
 		float dx = m_xLast - GameInput::GetAnalogInput(GameInput::kAnalogMouseX);
@@ -175,22 +189,145 @@ void GameApp::RenderScene(void)
 	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
 	// draw call
-	ObjConstants objConstants;
-	for (auto& iter : m_AllRenders)
-	{
-		gfxContext.SetPrimitiveTopology(iter->PrimitiveType);
-		gfxContext.SetVertexBuffer(0, iter->m_VertexBuffer.VertexBufferView());
-		gfxContext.SetIndexBuffer(iter->m_IndexBuffer.IndexBufferView());
-		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(iter->world)); // hlsl 列主序矩阵
-		gfxContext.SetDynamicConstantBufferView(0, sizeof(objConstants), &objConstants);
-
-		gfxContext.SetDynamicConstantBufferView(2, sizeof(MaterialConstants), &iter->materialConstants);
-		gfxContext.DrawIndexedInstanced(iter->IndexCount, 1, 0, 0, 0);
-	}
-
+	if (m_bRenderShapes)
+		DrawRenderItems(gfxContext, m_ShapeRenders);
+	else
+		DrawRenderItems(gfxContext, m_LandRenders);
+	
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 
 	gfxContext.Finish();
+}
+
+void GameApp::BuildShapeRenderItems()
+{
+	auto boxRitem = std::make_unique<RenderItem>();
+	boxRitem->World = XMMatrixIdentity() * XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f);
+	boxRitem->Mat = m_Materials["stone0"].get();
+	boxRitem->Geo = m_Geometry["shapeGeo"].get();
+	boxRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	boxRitem->IndexCount = boxRitem->Geo->DrawArgs["box"].IndexCount;
+	boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs["box"].StartIndexLocation;
+	boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation;
+	m_ShapeRenders.push_back(std::move(boxRitem));
+
+	auto gridRitem = std::make_unique<RenderItem>();
+	gridRitem->World = XMMatrixIdentity();
+	gridRitem->Mat = m_Materials["tile0"].get();
+	gridRitem->Geo = m_Geometry["shapeGeo"].get();
+	gridRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
+	gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
+	gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
+	m_ShapeRenders.push_back(std::move(gridRitem));
+
+	//auto skullRitem = std::make_unique<RenderItem>();
+	//skullRitem->World = XMMatrixIdentity() * XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f);
+	//skullRitem->Mat = m_Materials["skullMat"].get();
+	//skullRitem->Geo = m_Geometry["skullGeo"].get();
+	//skullRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	//skullRitem->IndexCount = skullRitem->Geo->DrawArgs["skull"].IndexCount;
+	//skullRitem->StartIndexLocation = skullRitem->Geo->DrawArgs["skull"].StartIndexLocation;
+	//skullRitem->BaseVertexLocation = skullRitem->Geo->DrawArgs["skull"].BaseVertexLocation;
+	//m_AllRenders.push_back(std::move(skullRitem));
+
+	for (int i = 0; i < 5; ++i)
+	{
+		auto leftCylRitem = std::make_unique<RenderItem>();
+		auto rightCylRitem = std::make_unique<RenderItem>();
+		auto leftSphereRitem = std::make_unique<RenderItem>();
+		auto rightSphereRitem = std::make_unique<RenderItem>();
+
+		XMMATRIX leftCylWorld = XMMatrixTranslation(-5.0f, 1.5f, -10.0f + i * 5.0f);
+		XMMATRIX rightCylWorld = XMMatrixTranslation(+5.0f, 1.5f, -10.0f + i * 5.0f);
+
+		XMMATRIX leftSphereWorld = XMMatrixTranslation(-5.0f, 3.5f, -10.0f + i * 5.0f);
+		XMMATRIX rightSphereWorld = XMMatrixTranslation(+5.0f, 3.5f, -10.0f + i * 5.0f);
+
+		leftCylRitem->World = leftCylWorld;
+		leftCylRitem->Mat = m_Materials["bricks0"].get();
+		leftCylRitem->Geo = m_Geometry["shapeGeo"].get();
+		leftCylRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		leftCylRitem->IndexCount = leftCylRitem->Geo->DrawArgs["cylinder"].IndexCount;
+		leftCylRitem->StartIndexLocation = leftCylRitem->Geo->DrawArgs["cylinder"].StartIndexLocation;
+		leftCylRitem->BaseVertexLocation = leftCylRitem->Geo->DrawArgs["cylinder"].BaseVertexLocation;
+
+		rightCylRitem->World = rightCylWorld;
+		rightCylRitem->Mat = m_Materials["bricks0"].get();
+		rightCylRitem->Geo = m_Geometry["shapeGeo"].get();
+		rightCylRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		rightCylRitem->IndexCount = rightCylRitem->Geo->DrawArgs["cylinder"].IndexCount;
+		rightCylRitem->StartIndexLocation = rightCylRitem->Geo->DrawArgs["cylinder"].StartIndexLocation;
+		rightCylRitem->BaseVertexLocation = rightCylRitem->Geo->DrawArgs["cylinder"].BaseVertexLocation;
+
+		leftSphereRitem->World = leftSphereWorld;
+		leftSphereRitem->Mat = m_Materials["stone0"].get();
+		leftSphereRitem->Geo = m_Geometry["shapeGeo"].get();
+		leftSphereRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		leftSphereRitem->IndexCount = leftSphereRitem->Geo->DrawArgs["sphere"].IndexCount;
+		leftSphereRitem->StartIndexLocation = leftSphereRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
+		leftSphereRitem->BaseVertexLocation = leftSphereRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+
+		rightSphereRitem->World = rightSphereWorld;
+		rightSphereRitem->Mat = m_Materials["stone0"].get();
+		rightSphereRitem->Geo = m_Geometry["shapeGeo"].get();
+		rightSphereRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		rightSphereRitem->IndexCount = rightSphereRitem->Geo->DrawArgs["sphere"].IndexCount;
+		rightSphereRitem->StartIndexLocation = rightSphereRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
+		rightSphereRitem->BaseVertexLocation = rightSphereRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+
+		m_ShapeRenders.push_back(std::move(leftCylRitem));
+		m_ShapeRenders.push_back(std::move(rightCylRitem));
+		m_ShapeRenders.push_back(std::move(leftSphereRitem));
+		m_ShapeRenders.push_back(std::move(rightSphereRitem));
+	}
+
+}
+
+
+void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<std::unique_ptr<RenderItem>>& items)
+{
+	ObjConstants objConstants;
+	MaterialConstants matCB;
+	for (auto& iter : items)
+	{
+		gfxContext.SetPrimitiveTopology(iter->PrimitiveType);
+		gfxContext.SetVertexBuffer(0, iter->Geo->m_VertexBuffer.VertexBufferView());
+		gfxContext.SetIndexBuffer(iter->Geo->m_IndexBuffer.IndexBufferView());
+		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(iter->World)); // hlsl 列主序矩阵
+		gfxContext.SetDynamicConstantBufferView(0, sizeof(objConstants), &objConstants);
+
+		matCB.DiffuseAlbedo = iter->Mat->DiffuseAlbedo;
+		matCB.FresnelR0 = iter->Mat->FresnelR0;
+		matCB.Roughness = iter->Mat->Roughness;
+		gfxContext.SetDynamicConstantBufferView(2, sizeof(MaterialConstants), &matCB);
+		gfxContext.DrawIndexedInstanced(iter->IndexCount, 1, iter->StartIndexLocation, iter->BaseVertexLocation, 0);
+	}
+}
+
+void GameApp::BuildLandRenderItems()
+{
+	auto land = std::make_unique<RenderItem>();
+	land->World = XMMatrixIdentity() * XMMatrixScaling(0.5, 0.5, 0.5) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
+	land->Geo = m_Geometry["landGeo"].get();
+	land->Mat = m_Materials["grass"].get();
+	land->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	land->IndexCount = land->Geo->DrawArgs["land"].IndexCount;
+	land->BaseVertexLocation = land->Geo->DrawArgs["land"].BaseVertexLocation;
+	land->StartIndexLocation = land->Geo->DrawArgs["land"].StartIndexLocation;
+
+	m_LandRenders.push_back(std::move(land));
+
+	auto wave = std::make_unique<RenderItem>();
+	wave->World = XMMatrixIdentity() * XMMatrixScaling(0.6, 0.5, 0.6) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
+	wave->Geo = m_Geometry["waveGeo"].get();
+	wave->Mat = m_Materials["water"].get();
+	wave->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	wave->IndexCount = wave->Geo->DrawArgs["wave"].IndexCount;
+	wave->BaseVertexLocation = wave->Geo->DrawArgs["wave"].BaseVertexLocation;
+	wave->StartIndexLocation = wave->Geo->DrawArgs["wave"].StartIndexLocation;
+
+	m_LandRenders.push_back(std::move(wave));
 }
 
 void GameApp::BuildLandGeometry()
@@ -218,20 +355,18 @@ void GameApp::BuildLandGeometry()
 	const uint32_t vertexBufferSize = sizeof(Vertex);
 	const uint32_t indexBufferSize = sizeof(uint16_t);
 
-	auto land = std::make_unique<RenderItem>(); 
-	land->world = XMMatrixIdentity() * XMMatrixScaling(0.5, 0.5, 0.5) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
-	land->IndexCount = (UINT)indices.size();
-	land->StartIndexLocation = 0;
-	land->BaseVertexLocation = 0;
-	
-	land->materialConstants.DiffuseAlbedo = m_Materials["grass"]->DiffuseAlbedo;
-	land->materialConstants.FresnelR0 = m_Materials["grass"]->FresnelR0;
-	land->materialConstants.Roughness = m_Materials["grass"]->Roughness;
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->name = "landGeo";
+	geo->m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), vertexBufferSize, vertices.data());
+	geo->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), indexBufferSize, indices.data());
 
-	land->m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), vertexBufferSize, vertices.data());
-	land->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), indexBufferSize, indices.data());
+	SubmeshGeometry submesh;
+	submesh.IndexCount = (UINT)indices.size();
+	submesh.BaseVertexLocation = 0;
+	submesh.StartIndexLocation = 0;
+	geo->DrawArgs["land"] = std::move(submesh);
 
-	m_AllRenders.push_back(std::move(land));
+	m_Geometry["landGeo"] = std::move(geo);
 }
 
 void GameApp::BuildWavesGeometry()
@@ -260,21 +395,109 @@ void GameApp::BuildWavesGeometry()
 	}
 
 	UINT indexBufferSize = sizeof(std::uint16_t);
-	
-	auto wave = std::make_unique<RenderItem>();
-	wave->world = XMMatrixIdentity() * XMMatrixScaling(0.6, 0.5, 0.6) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
-	wave->IndexCount = (UINT)indices.size();
-	wave->StartIndexLocation = 0;
-	wave->BaseVertexLocation = 0;
-	wave->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), indexBufferSize, indices.data());
 
-	wave->materialConstants.DiffuseAlbedo = m_Materials["water"]->DiffuseAlbedo;
-	wave->materialConstants.FresnelR0 = m_Materials["water"]->FresnelR0;
-	wave->materialConstants.Roughness = m_Materials["water"]->Roughness;
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->name = "waveGeo";
+	geo->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), indexBufferSize, indices.data());
 
-	m_WavesRitem = wave.get();
+	SubmeshGeometry submesh;
+	submesh.IndexCount = (UINT)indices.size();
+	submesh.BaseVertexLocation = 0;
+	submesh.StartIndexLocation = 0;
+	geo->DrawArgs["wave"] = std::move(submesh);
 
-	m_AllRenders.push_back(std::move(wave));
+	m_Geometry["waveGeo"] = std::move(geo);
+}
+
+void GameApp::BuildShapeGeometry()
+{
+	GeometryGenerator geoGen;
+	GeometryGenerator::MeshData box = geoGen.CreateBox(1.5f, 0.5f, 1.5f, 3);
+	GeometryGenerator::MeshData grid = geoGen.CreateGrid(20.0f, 30.0f, 60, 40);
+	GeometryGenerator::MeshData sphere = geoGen.CreateSphere(0.5f, 20, 20);
+	GeometryGenerator::MeshData cylinder = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
+
+	UINT boxVertexOffset = 0;
+	UINT gridVertexOffset = (UINT)box.Vertices.size();
+	UINT sphereVertexOffset = gridVertexOffset + (UINT)grid.Vertices.size();
+	UINT cylinderVertexOffset = sphereVertexOffset + (UINT)sphere.Vertices.size();
+
+	// Cache the starting index for each object in the concatenated index buffer.
+	UINT boxIndexOffset = 0;
+	UINT gridIndexOffset = (UINT)box.Indices32.size();
+	UINT sphereIndexOffset = gridIndexOffset + (UINT)grid.Indices32.size();
+	UINT cylinderIndexOffset = sphereIndexOffset + (UINT)sphere.Indices32.size();
+
+	SubmeshGeometry boxSubmesh;
+	boxSubmesh.IndexCount = (UINT)box.Indices32.size();
+	boxSubmesh.StartIndexLocation = boxIndexOffset;
+	boxSubmesh.BaseVertexLocation = boxVertexOffset;
+
+	SubmeshGeometry gridSubmesh;
+	gridSubmesh.IndexCount = (UINT)grid.Indices32.size();
+	gridSubmesh.StartIndexLocation = gridIndexOffset;
+	gridSubmesh.BaseVertexLocation = gridVertexOffset;
+
+	SubmeshGeometry sphereSubmesh;
+	sphereSubmesh.IndexCount = (UINT)sphere.Indices32.size();
+	sphereSubmesh.StartIndexLocation = sphereIndexOffset;
+	sphereSubmesh.BaseVertexLocation = sphereVertexOffset;
+
+	SubmeshGeometry cylinderSubmesh;
+	cylinderSubmesh.IndexCount = (UINT)cylinder.Indices32.size();
+	cylinderSubmesh.StartIndexLocation = cylinderIndexOffset;
+	cylinderSubmesh.BaseVertexLocation = cylinderVertexOffset;
+
+	auto totalVertexCount =
+		box.Vertices.size() +
+		grid.Vertices.size() +
+		sphere.Vertices.size() +
+		cylinder.Vertices.size();
+
+	std::vector<Vertex> vertices(totalVertexCount);
+
+	UINT k = 0;
+	for (size_t i = 0; i < box.Vertices.size(); ++i, ++k)
+	{
+		vertices[k].position = box.Vertices[i].Position;
+		vertices[k].normal = box.Vertices[i].Normal;
+	}
+
+	for (size_t i = 0; i < grid.Vertices.size(); ++i, ++k)
+	{
+		vertices[k].position = grid.Vertices[i].Position;
+		vertices[k].normal = grid.Vertices[i].Normal;
+	}
+
+	for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k)
+	{
+		vertices[k].position = sphere.Vertices[i].Position;
+		vertices[k].normal = sphere.Vertices[i].Normal;
+	}
+
+	for (size_t i = 0; i < cylinder.Vertices.size(); ++i, ++k)
+	{
+		vertices[k].position = cylinder.Vertices[i].Position;
+		vertices[k].normal = cylinder.Vertices[i].Normal;
+	}
+
+	std::vector<std::uint16_t> indices;
+	indices.insert(indices.end(), std::begin(box.GetIndices16()), std::end(box.GetIndices16()));
+	indices.insert(indices.end(), std::begin(grid.GetIndices16()), std::end(grid.GetIndices16()));
+	indices.insert(indices.end(), std::begin(sphere.GetIndices16()), std::end(sphere.GetIndices16()));
+	indices.insert(indices.end(), std::begin(cylinder.GetIndices16()), std::end(cylinder.GetIndices16()));
+
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->name = "shapeGeo";
+	geo->m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), sizeof(Vertex), vertices.data());
+	geo->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), sizeof(std::uint16_t), indices.data());
+
+	geo->DrawArgs["box"] = std::move(boxSubmesh);
+	geo->DrawArgs["grid"] = std::move(gridSubmesh);
+	geo->DrawArgs["sphere"] = std::move(sphereSubmesh);
+	geo->DrawArgs["cylinder"] = std::move(cylinderSubmesh);
+
+	m_Geometry["shapeGeo"] = std::move(geo);
 }
 
 float GameApp::GetHillsHeight(float x, float z) const
@@ -331,7 +554,7 @@ void GameApp::UpdateWaves(float deltaT)
 		m_VerticesWaves.push_back(v);
 	}
 
-	m_WavesRitem->m_VertexBuffer.Create(L"vertex buffer", m_VerticesWaves.size(), sizeof(Vertex), m_VerticesWaves.data());
+	m_Geometry["waveGeo"]->m_VertexBuffer.Create(L"vertex buffer", m_VerticesWaves.size(), sizeof(Vertex), m_VerticesWaves.data());
 }
 
 void GameApp::BuildMaterials()
@@ -350,7 +573,43 @@ void GameApp::BuildMaterials()
 	water->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
 	water->Roughness = 0.0f;
 
+	auto bricks0 = std::make_unique<Material>();
+	bricks0->Name = "bricks0";
+	//bricks0->MatCBIndex = 0;
+	//bricks0->DiffuseSrvHeapIndex = 0;
+	bricks0->DiffuseAlbedo = XMFLOAT4(Colors::ForestGreen);
+	bricks0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
+	bricks0->Roughness = 0.1f;
+
+	auto stone0 = std::make_unique<Material>();
+	stone0->Name = "stone0";
+	//stone0->MatCBIndex = 1;
+	//stone0->DiffuseSrvHeapIndex = 1;
+	stone0->DiffuseAlbedo = XMFLOAT4(Colors::LightSteelBlue);
+	stone0->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
+	stone0->Roughness = 0.3f;
+
+	auto tile0 = std::make_unique<Material>();
+	tile0->Name = "tile0";
+	//tile0->MatCBIndex = 2;
+	//tile0->DiffuseSrvHeapIndex = 2;
+	tile0->DiffuseAlbedo = XMFLOAT4(Colors::LightGray);
+	tile0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
+	tile0->Roughness = 0.2f;
+
+	auto skullMat = std::make_unique<Material>();
+	skullMat->Name = "skullMat";
+	//skullMat->MatCBIndex = 3;
+	//skullMat->DiffuseSrvHeapIndex = 3;
+	skullMat->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
+	skullMat->Roughness = 0.3f;
+
 	m_Materials["grass"] = std::move(grass);
 	m_Materials["water"] = std::move(water);
+	m_Materials["bricks0"] = std::move(bricks0);
+	m_Materials["stone0"] = std::move(stone0);
+	m_Materials["tile0"] = std::move(tile0);
+	m_Materials["skullMat"] = std::move(skullMat);
 }
 

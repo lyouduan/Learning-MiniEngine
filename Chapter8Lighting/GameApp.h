@@ -7,25 +7,23 @@
 #include <DirectXMath.h>
 #include "Waves.h"
 #include "d3dUtil.h"
+#include <memory>
 
 // render item
 struct RenderItem
 {
 	RenderItem() = default;
-	DirectX::XMMATRIX world;
+	DirectX::XMMATRIX World;
 
 	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-	// buffer
-	StructuredBuffer m_VertexBuffer;
-	ByteAddressBuffer m_IndexBuffer;
+	MeshGeometry* Geo = nullptr;
 
-	// params of DrawIndexedInstanced
+	Material* Mat = nullptr;
+
 	UINT IndexCount = 0;
 	UINT StartIndexLocation = 0;
-	int  BaseVertexLocation = 0;
-
-	MaterialConstants materialConstants;
+	UINT BaseVertexLocation = 0;
 };
 
 class GameApp : public GameCore::IGameApp
@@ -42,8 +40,14 @@ public:
 
 private:
 
+	void DrawRenderItems(GraphicsContext& gfxContext, std::vector<std::unique_ptr<RenderItem>>& items);
+
+	void BuildLandRenderItems();
+	void BuildShapeRenderItems();
 	void BuildLandGeometry();
 	void BuildWavesGeometry();
+	void BuildShapeGeometry();
+
 	float GetHillsHeight(float x, float z)const;
 	DirectX::XMFLOAT3 GetHillsNormal(float x, float z)const;
 	void UpdateWaves(float deltaT);
@@ -53,16 +57,22 @@ private:
 	RootSignature m_RootSignature;
 	GraphicsPSO m_PSO;
 
+	// switch render scene
+	bool m_bRenderShapes = true;
+
 	// waves
 	std::unique_ptr<Waves> mWaves;
 	RenderItem* m_WavesRitem;
 	std::vector<Vertex> m_VerticesWaves;
 
 	// List of all the render items.
-	std::vector < std::unique_ptr<RenderItem>> m_AllRenders;
+	std::vector < std::unique_ptr<RenderItem>> m_ShapeRenders;
+	std::vector < std::unique_ptr<RenderItem>> m_LandRenders;
 
 	// materials
 	std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
+	// geometry
+	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometry;
 
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;
