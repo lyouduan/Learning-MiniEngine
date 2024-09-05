@@ -19,15 +19,46 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Core\Command\CommandContext.h" />
-    <ClInclude Include="Core\GraphicsCommon.h" />
-    <ClInclude Include="Core\Resource\BufferManager.h" />
-    <ClInclude Include="Core\Resource\ColorBuffer.h" />
-    <ClInclude Include="Core\Utils\Color.h" />
+    <ClCompile Include="Core\Command\CommandAllocatorPool.cpp" />
+    <ClCompile Include="Core\Command\CommandContext.cpp" />
+    <ClCompile Include="Core\Command\CommandListManager.cpp" />
+    <ClCompile Include="Core\Command\PipelineState.cpp" />
+    <ClCompile Include="Core\Command\RootSignature.cpp" />
+    <ClCompile Include="Core\Display.cpp" />
+    <ClCompile Include="Core\GameCore.cpp" />
+    <ClCompile Include="Core\GraphicsCommon.cpp" />
+    <ClCompile Include="Core\GraphicsCore.cpp" />
+    <ClCompile Include="Core\Math\BoundingSphere.cpp" />
+    <ClCompile Include="Core\Math\Frustum.cpp" />
+    <ClCompile Include="Core\Math\Random.cpp" />
+    <ClCompile Include="Core\Resource\BufferManager.cpp" />
+    <ClCompile Include="Core\Resource\ColorBuffer.cpp" />
+    <ClCompile Include="Core\Resource\DepthBuffer.cpp" />
+    <ClCompile Include="Core\Resource\DescriptorHeap.cpp" />
+    <ClCompile Include="Core\Resource\GpuBuffer.cpp" />
+    <ClCompile Include="Core\Resource\LinearAllocator.cpp" />
+    <ClCompile Include="Core\Resource\PixelBuffer.cpp" />
+    <ClCompile Include="Core\Resource\UploadBuffer.cpp" />
+    <ClCompile Include="Core\Utils\Color.cpp" />
+    <ClCompile Include="Core\Utils\GameInput.cpp" />
+    <ClCompile Include="Core\Utils\GeometryGenerator.cpp" />
+    <ClCompile Include="Core\Utils\pch.cpp" />
+    <ClCompile Include="Core\Utils\Utility.cpp" />
+    <ClCompile Include="Core\Utils\Waves.cpp" />
+    <ClCompile Include="Core\Utils\d3dUtil.cpp" />
+    <ClCompile Include="GameApp.cpp" />
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="Core\Command\CommandAllocatorPool.h" />
+    <ClInclude Include="Core\Command\CommandContext.h" />
     <ClInclude Include="Core\Command\CommandListManager.h" />
-    <ClInclude Include="Core\Utils\d3dx12.h" />
+    <ClInclude Include="Core\Command\PipelineState.h" />
+    <ClInclude Include="Core\Command\RootSignature.h" />
+    <ClInclude Include="Core\Display.h" />
     <ClInclude Include="Core\GameCore.h" />
+    <ClInclude Include="Core\GraphicsCommon.h" />
+    <ClInclude Include="Core\GraphicsCore.h" />
     <ClInclude Include="Core\Math\BoundingBox.h" />
     <ClInclude Include="Core\Math\BoundingPlane.h" />
     <ClInclude Include="Core\Math\BoundingSphere.h" />
@@ -40,86 +71,51 @@
     <ClInclude Include="Core\Math\Scalar.h" />
     <ClInclude Include="Core\Math\Transform.h" />
     <ClInclude Include="Core\Math\Vector.h" />
+    <ClInclude Include="Core\Resource\BufferManager.h" />
+    <ClInclude Include="Core\Resource\ColorBuffer.h" />
+    <ClInclude Include="Core\Resource\DepthBuffer.h" />
+    <ClInclude Include="Core\Resource\DescriptorHeap.h" />
+    <ClInclude Include="Core\Resource\GpuBuffer.h" />
+    <ClInclude Include="Core\Resource\GpuResource.h" />
+    <ClInclude Include="Core\Resource\LinearAllocator.h" />
+    <ClInclude Include="Core\Resource\PixelBuffer.h" />
+    <ClInclude Include="Core\Resource\UploadBuffer.h" />
+    <ClInclude Include="Core\Utils\Color.h" />
+    <ClInclude Include="Core\Utils\d3dx12.h" />
     <ClInclude Include="Core\Utils\GameInput.h" />
+    <ClInclude Include="Core\Utils\GeometryGenerator.h" />
     <ClInclude Include="Core\Utils\Hash.h" />
     <ClInclude Include="Core\Utils\pch.h" />
     <ClInclude Include="Core\Utils\Utility.h" />
     <ClInclude Include="Core\Utils\VectorMath.h" />
-    <ClInclude Include="Core\GraphicsCore.h" />
-    <ClInclude Include="Core\Display.h" />
-    <ClInclude Include="Core\Resource\DescriptorHeap.h" />
-    <ClInclude Include="Core\Resource\DepthBuffer.h" />
-    <ClInclude Include="GameApp.h" />
-    <ClInclude Include="Core\Resource\GpuResource.h" />
-    <ClInclude Include="Core\Resource\PixelBuffer.h" />
-    <ClInclude Include="Core\Command\RootSignature.h" />
-    <ClInclude Include="Core\Command\PipelineState.h" />
-    <ClInclude Include="Core\Resource\GpuBuffer.h" />
-    <ClInclude Include="Core\Resource\LinearAllocator.h" />
-    <ClInclude Include="Core\Resource\UploadBuffer.h" />
-    <ClInclude Include="Core\Utils\GeometryGenerator.h" />
     <ClInclude Include="Core\Utils\Waves.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="Core\Command\CommandContext.cpp" />
-    <ClCompile Include="Core\GraphicsCommon.cpp" />
-    <ClCompile Include="Core\Resource\BufferManager.cpp" />
-    <ClCompile Include="Core\Resource\ColorBuffer.cpp" />
-    <ClCompile Include="Core\Utils\Color.cpp" />
-    <ClCompile Include="Core\Command\CommandAllocatorPool.cpp" />
-    <ClCompile Include="Core\Command\CommandListManager.cpp" />
-    <ClCompile Include="Core\GameCore.cpp" />
-    <ClCompile Include="Core\Math\BoundingSphere.cpp" />
-    <ClCompile Include="Core\Math\Frustum.cpp" />
-    <ClCompile Include="Core\Math\Random.cpp" />
-    <ClCompile Include="Core\Utils\GameInput.cpp" />
-    <ClCompile Include="Core\Utils\Utility.cpp" />
-    <ClCompile Include="Core\GraphicsCore.cpp" />
-    <ClCompile Include="Core\Display.cpp" />
-    <ClCompile Include="Core\Resource\DescriptorHeap.cpp" />
-    <ClCompile Include="Core\Resource\DepthBuffer.cpp" />
-    <ClCompile Include="GameApp.cpp" />
-    <ClCompile Include="Core\Resource\GpuBuffer.cpp" />
-    <ClCompile Include="Core\Resource\LinearAllocator.cpp" />
-    <ClCompile Include="Core\Utils\GeometryGenerator.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="Core\Utils\pch.cpp" />
-    <ClCompile Include="Core\Resource\PixelBuffer.cpp" />
-    <ClCompile Include="Core\Command\RootSignature.cpp" />
-    <ClCompile Include="Core\Command\PipelineState.cpp" />
-    <ClCompile Include="Core\Resource\UploadBuffer.cpp" />
-    <ClCompile Include="Core\Utils\Waves.cpp" />
+    <ClInclude Include="Core\Utils\d3dUtil.h" />
+    <ClInclude Include="GameApp.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Core\Math\Functions.inl" />
+    <None Include="shader\common.hlsli" />
+    <None Include="shader\LightingUtil.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader\PixelShader.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.1</ShaderModel>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.1</ShaderModel>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
     </FxCompile>
     <FxCompile Include="shader\VertexShader.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.1</ShaderModel>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.1</ShaderModel>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
     </FxCompile>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{ef2bf27a-25d8-446b-9b60-035bc04c6a7e}</ProjectGuid>
-    <RootNamespace>Chapter7DrawingInDirect3DPart2</RootNamespace>
+    <ProjectGuid>{10b3bea8-9cd1-4c28-b481-340f2f05e5eb}</ProjectGuid>
+    <RootNamespace>Chapter8Lighting</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -182,8 +178,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <FxCompile>
-      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
       <ShaderModel>5.1</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -205,8 +201,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <FxCompile>
-      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
       <ShaderModel>5.1</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -224,8 +220,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <FxCompile>
-      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
       <ShaderModel>5.1</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -247,8 +243,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <FxCompile>
-      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
       <ShaderModel>5.1</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
