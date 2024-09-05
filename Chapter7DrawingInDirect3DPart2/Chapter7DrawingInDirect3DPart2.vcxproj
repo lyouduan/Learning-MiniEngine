@@ -58,6 +58,7 @@
     <ClInclude Include="Core\Resource\LinearAllocator.h" />
     <ClInclude Include="Core\Resource\UploadBuffer.h" />
     <ClInclude Include="Core\Utils\GeometryGenerator.h" />
+    <ClInclude Include="Core\Utils\Waves.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Core\Command\CommandContext.cpp" />
@@ -87,6 +88,7 @@
     <ClCompile Include="Core\Command\RootSignature.cpp" />
     <ClCompile Include="Core\Command\PipelineState.cpp" />
     <ClCompile Include="Core\Resource\UploadBuffer.cpp" />
+    <ClCompile Include="Core\Utils\Waves.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Core\Math\Functions.inl" />

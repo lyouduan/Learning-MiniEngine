@@ -17,6 +17,23 @@
 
 namespace Utility
 {
+
+    static float RandF()
+    {
+        return (float)(rand()) / (float)RAND_MAX;
+    }
+
+    // Returns random float in [a, b).
+    static float RandF(float a, float b)
+    {
+        return a + RandF() * (b - a);
+    }
+
+    static int Rand(int a, int b)
+    {
+        return a + rand() % ((b - a) + 1);
+    }
+
 #ifdef _CONSOLE
     inline void Print( const char* msg ) { printf("%s", msg); }
     inline void Print( const wchar_t* msg ) { wprintf(L"%ws", msg); }
@@ -161,3 +178,4 @@ namespace Utility
 
 void SIMDMemCopy( void* __restrict Dest, const void* __restrict Source, size_t NumQuadwords );
 void SIMDMemFill( void* __restrict Dest, __m128 FillVector, size_t NumQuadwords );
+

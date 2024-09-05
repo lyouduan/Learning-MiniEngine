@@ -111,5 +111,5 @@ void Display::Present(void)
     s_SwapChain1->Present(0, 0);
     g_CurrentBuffer = (g_CurrentBuffer + 1) % SWAP_CHAIN_BUFFER_COUNT;
 
-    
+    SetNativeResolution();
 }

@@ -5,6 +5,7 @@
 #include "PipelineState.h"
 #include "GpuBuffer.h"
 #include <DirectXMath.h>
+#include "Waves.h"
 
 // render item
 struct RenderItem
@@ -13,6 +14,10 @@ struct RenderItem
 	DirectX::XMMATRIX world;
 
 	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	// buffer
+	StructuredBuffer m_VertexBuffer;
+	ByteAddressBuffer m_IndexBuffer;
 
 	// params of DrawIndexedInstanced
 	UINT IndexCount = 0;
@@ -36,11 +41,12 @@ public:
 private:
 
 	void BuildLandGeometry();
+	void BuildWavesGeometry();
 	float GetHillsHeight(float x, float z)const;
+	void UpdateWaves(float deltaT);
 
 	RootSignature m_RootSignature;
 	GraphicsPSO m_PSO;
-
 	
 
 	struct Vertex {
@@ -48,8 +54,10 @@ private:
 		DirectX::XMFLOAT4 color;
 	};
 
-	StructuredBuffer m_VertexBuffer;
-	ByteAddressBuffer m_IndexBuffer;
+	// waves
+	std::unique_ptr<Waves> mWaves;
+	RenderItem* m_WavesRitem;
+	std::vector<Vertex> m_VerticesWaves;
 
 	// List of all the render items.
 	std::vector < std::unique_ptr<RenderItem>> m_AllRenders;
@@ -60,6 +68,7 @@ private:
 
 	DirectX::XMMATRIX m_View;
 	DirectX::XMMATRIX m_Projection;
+	DirectX::XMFLOAT4X4 m_MVP;
 	float m_radius = 5.0f;
 	// x方向弧度
 	float m_xRotate = 0.0f;

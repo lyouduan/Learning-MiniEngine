@@ -25,17 +25,18 @@ GameApp::GameApp(void)
 	m_Viewport.TopLeftY = 0;
 	m_Viewport.Width = static_cast<float>(g_DisplayWidth);
 	m_Viewport.Height = static_cast<float>(g_DisplayHeight);
-	m_Viewport.MinDepth = 0.0;
-	m_Viewport.MaxDepth = 1.0;
+	m_Viewport.MinDepth = 0.0f;
+	m_Viewport.MaxDepth = 1.0f;
 	 
 	m_aspectRatio = static_cast<float>(g_DisplayWidth) / static_cast<float>(g_DisplayHeight);
 
+	mWaves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 }
 void GameApp::Startup(void)
 {
 	// prepare data
 	BuildLandGeometry();
-
+	BuildWavesGeometry();
 
 	// initialize root signature
 	m_RootSignature.Reset(1, 0);
@@ -62,7 +63,7 @@ void GameApp::Startup(void)
 	m_PSO.SetRootSignature(m_RootSignature);
 	m_PSO.SetRasterizerState(RasterizerDefault);
 	m_PSO.SetBlendState(BlendDisable);
-	m_PSO.SetDepthStencilState(DepthStateDisabled);
+	m_PSO.SetDepthStencilState(DepthStateReadWrite);
 	m_PSO.SetInputLayout(_countof(mInputLayout), mInputLayout);
 	m_PSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 	m_PSO.SetRenderTargetFormat(ColorFormat, DepthFormat);
@@ -73,8 +74,11 @@ void GameApp::Startup(void)
 
 void GameApp::Cleanup(void)
 {
-	m_VertexBuffer.Destroy();
-	m_IndexBuffer.Destroy();
+	for (auto& iter : m_AllRenders)
+	{
+		iter->m_VertexBuffer.Destroy();
+		iter->m_IndexBuffer.Destroy();
+	}
 }
 
 void GameApp::Update(float deltaT)
@@ -121,7 +125,10 @@ void GameApp::Update(float deltaT)
 	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
 	m_View = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
 
-	m_Projection = XMMatrixPerspectiveFovLH(0.25f * XM_PI, m_aspectRatio, 0.1f, 100.0f);
+	m_Projection = XMMatrixPerspectiveFovLH(0.25f * XM_PI, m_aspectRatio, 0.1f, 1000.0f);
+
+	// update waves
+	UpdateWaves(deltaT);
 }
 
 void GameApp::RenderScene(void)
@@ -134,8 +141,7 @@ void GameApp::RenderScene(void)
 	gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 	// clear dsv
-	gfxContext.ClearDepth(g_SceneDepthBuffer);
-	
+	gfxContext.ClearDepthAndStencil(g_SceneDepthBuffer);
 	// clear rtv
 	g_DisplayPlane[g_CurrentBuffer].SetClearColor(Color{ 0.2f, 0.4f, 0.6f, 1.0f });
 	gfxContext.ClearColor(g_DisplayPlane[g_CurrentBuffer]);
@@ -147,14 +153,15 @@ void GameApp::RenderScene(void)
 	gfxContext.SetPipelineState(m_PSO);
 
 	gfxContext.SetRootSignature(m_RootSignature);
-	gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	gfxContext.SetVertexBuffer(0, m_VertexBuffer.VertexBufferView());
-	gfxContext.SetIndexBuffer(m_IndexBuffer.IndexBufferView());
 
 	// draw call
 	for (auto& iter : m_AllRenders)
 	{
-		auto m_MVP = iter->world * m_View * m_Projection;
+		gfxContext.SetPrimitiveTopology(iter->PrimitiveType);
+		gfxContext.SetVertexBuffer(0, iter->m_VertexBuffer.VertexBufferView());
+		gfxContext.SetIndexBuffer(iter->m_IndexBuffer.IndexBufferView());
+		auto mvp = iter->world * m_View * m_Projection;
+		XMStoreFloat4x4(&m_MVP, XMMatrixTranspose(mvp)); // hlsl 列主序矩阵
 		gfxContext.SetDynamicConstantBufferView(0, sizeof(m_MVP), &m_MVP);
 		gfxContext.DrawIndexedInstanced(iter->IndexCount, 1, 0, 0, 0);
 	}
@@ -215,19 +222,96 @@ void GameApp::BuildLandGeometry()
 	const uint32_t vertexBufferSize = sizeof(Vertex);
 	const uint32_t indexBufferSize = sizeof(uint16_t);
 
-	m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), vertexBufferSize, vertices.data());
-	m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), indexBufferSize, indices.data());
-
 	auto land = std::make_unique<RenderItem>(); 
-	land->world = XMMatrixIdentity() * XMMatrixScaling(0.5, 0.5, 0.5) * XMMatrixTranslation(0.0f, -10.0f, -20.f);
+	land->world = XMMatrixIdentity() * XMMatrixScaling(0.5, 0.5, 0.5) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
 	land->IndexCount = (UINT)indices.size();
 	land->StartIndexLocation = 0;
 	land->BaseVertexLocation = 0;
 
+	land->m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), vertexBufferSize, vertices.data());
+	land->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), indexBufferSize, indices.data());
+
 	m_AllRenders.push_back(std::move(land));
+}
+
+void GameApp::BuildWavesGeometry()
+{
+	std::vector<std::uint16_t> indices(3 * mWaves->TriangleCount()); // 3 indices per face
+	assert(mWaves->VertexCount() < 0x0000ffff);
+
+	// Iterate over each quad.
+	int m = mWaves->RowCount();
+	int n = mWaves->ColumnCount();
+	int k = 0;
+	for (int i = 0; i < m - 1; ++i)
+	{
+		for (int j = 0; j < n - 1; ++j)
+		{
+			indices[k] = i * n + j;
+			indices[k + 1] = i * n + j + 1;
+			indices[k + 2] = (i + 1) * n + j;
+
+			indices[k + 3] = (i + 1) * n + j;
+			indices[k + 4] = i * n + j + 1;
+			indices[k + 5] = (i + 1) * n + j + 1;
+
+			k += 6; // next quad
+		}
+	}
+
+	UINT indexBufferSize = sizeof(std::uint16_t);
+	
+	auto wave = std::make_unique<RenderItem>();
+	wave->world = XMMatrixIdentity() * XMMatrixScaling(0.6, 0.5, 0.6) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
+	wave->IndexCount = (UINT)indices.size();
+	wave->StartIndexLocation = 0;
+	wave->BaseVertexLocation = 0;
+	wave->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), indexBufferSize, indices.data());
+
+	m_WavesRitem = wave.get();
+
+	m_AllRenders.push_back(std::move(wave));
 }
 
 float GameApp::GetHillsHeight(float x, float z) const
 {
 	return 0.3f * (z * sinf(0.1f * x) + x * cosf(0.1f * z));
+}
+
+void GameApp::UpdateWaves(float deltaT)
+{
+	// Every quarter second, generate a random wave.
+	static float t_base = 0.0f;
+
+	t_base += deltaT;
+
+	if (t_base  >= 0.25f)
+	{
+		t_base -= 0.25f;
+
+		int i = Utility::Rand(4, mWaves->RowCount() - 5);
+		int j = Utility::Rand(4, mWaves->ColumnCount() - 5);
+
+		float r = Utility::RandF(0.2f, 0.5f);
+
+		mWaves->Disturb(i, j, r);
+	}
+	
+
+	// Update the wave simulation.
+	mWaves->Update(deltaT);
+
+	// Update the wave vertex buffer with the new solution.
+	m_VerticesWaves.clear();
+	for (int i = 0; i < mWaves->VertexCount(); ++i)
+	{
+		Vertex v;
+
+		v.position = mWaves->Position(i);
+		v.color = XMFLOAT4(DirectX::Colors::Blue);
+
+		m_VerticesWaves.push_back(v);
+	}
+
+	m_WavesRitem->m_VertexBuffer.Create(L"vertex buffer", m_VerticesWaves.size(), sizeof(Vertex), m_VerticesWaves.data());
 }
