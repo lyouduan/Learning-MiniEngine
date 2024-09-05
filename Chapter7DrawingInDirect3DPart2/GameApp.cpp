@@ -7,6 +7,7 @@
 #include "GraphicsCommon.h"
 #include "GameInput.h"
 #include <DirectXColors.h>
+#include "GeometryGenerator.h"
 
 #include <d3dcompiler.h>
 
@@ -28,58 +29,18 @@ GameApp::GameApp(void)
 	m_Viewport.MaxDepth = 1.0;
 	 
 	m_aspectRatio = static_cast<float>(g_DisplayWidth) / static_cast<float>(g_DisplayHeight);
+
 }
 void GameApp::Startup(void)
 {
+	// prepare data
+	BuildLandGeometry();
+
+
 	// initialize root signature
 	m_RootSignature.Reset(1, 0);
 	m_RootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
 	m_RootSignature.Finalize(L"root sinature", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-	// data
-	Vertex triangleVertices[] =
-	{
-		Vertex({ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(Colors::White) }),
-		Vertex({ XMFLOAT3(-0.5f, +0.5f, -0.5f), XMFLOAT4(Colors::Black) }),
-		Vertex({ XMFLOAT3(+0.5f, +0.5f, -0.5f), XMFLOAT4(Colors::Red) }),
-		Vertex({ XMFLOAT3(+0.5f, -0.5f, -0.5f), XMFLOAT4(Colors::Green) }),
-		Vertex({ XMFLOAT3(-0.5f, -0.5f, +0.5f), XMFLOAT4(Colors::Blue) }),
-		Vertex({ XMFLOAT3(-0.5f, +0.5f, +0.5f), XMFLOAT4(Colors::Yellow) }),
-		Vertex({ XMFLOAT3(+0.5f, +0.5f, +0.5f), XMFLOAT4(Colors::Cyan) }),
-		Vertex({ XMFLOAT3(+0.5f, -0.5f, +0.5f), XMFLOAT4(Colors::Magenta) })
-	};
-	uint16_t vertexIndex[] =
-	{
-		  // front face
-        0, 1, 2,
-        0, 2, 3,
-        
-        // back face
-        4, 6, 5,
-        4, 7, 6,
-
-        // left face
-        4, 5, 1,
-        4, 1, 0,
-
-        // right face
-        3, 2, 6,
-        3, 6, 7,
-
-        // top face
-        1, 5, 6,
-        1, 6, 2,
-
-        // bottom face
-        4, 0, 3,
-        4, 3, 7,
-	};
-
-	const uint32_t vertexBufferSize = sizeof(Vertex);
-	const uint32_t indexBufferSize = sizeof(uint16_t);
-
-	m_VertexBuffer.Create(L"vertex buff", 8, vertexBufferSize, triangleVertices);
-	m_IndexBuffer.Create(L"Index Buffer", 36, indexBufferSize, vertexIndex);
 	
 	// shader input layout
 	D3D12_INPUT_ELEMENT_DESC mInputLayout[] =
@@ -154,19 +115,13 @@ void GameApp::Update(float deltaT)
 	float y = m_radius * sinf(m_yRotate);
 	float z = m_radius * cosf(m_yRotate) * cosf(m_xRotate);
 
-	float angle = static_cast<float>(0.0);
-	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
-	XMMATRIX Model = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
-
 	// Update the view matrix.
 	const XMVECTOR eyePosition = XMVectorSet(x, y, z, 1); // point
 	const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1); // point
 	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
-	XMMATRIX View = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
+	m_View = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
 
-	XMMATRIX Proj = XMMatrixPerspectiveFovLH(0.25f * XM_PI, m_aspectRatio, 0.1f, 100.0f);
-
-	m_MVP = XMMatrixMultiply(View, Proj);
+	m_Projection = XMMatrixPerspectiveFovLH(0.25f * XM_PI, m_aspectRatio, 0.1f, 100.0f);
 }
 
 void GameApp::RenderScene(void)
@@ -196,12 +151,83 @@ void GameApp::RenderScene(void)
 	gfxContext.SetVertexBuffer(0, m_VertexBuffer.VertexBufferView());
 	gfxContext.SetIndexBuffer(m_IndexBuffer.IndexBufferView());
 
-	gfxContext.SetDynamicConstantBufferView(0, sizeof(m_MVP), &m_MVP);
-
 	// draw call
-	gfxContext.DrawIndexedInstanced(36, 1, 0, 0, 0);
+	for (auto& iter : m_AllRenders)
+	{
+		auto m_MVP = iter->world * m_View * m_Projection;
+		gfxContext.SetDynamicConstantBufferView(0, sizeof(m_MVP), &m_MVP);
+		gfxContext.DrawIndexedInstanced(iter->IndexCount, 1, 0, 0, 0);
+	}
 
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 
 	gfxContext.Finish();
+}
+
+void GameApp::BuildLandGeometry()
+{
+	GeometryGenerator geoGen;
+	GeometryGenerator::MeshData grid = geoGen.CreateGrid(160.0f, 160.0f, 50, 50);
+
+	//
+	// Extract the vertex elements we are interested and apply the height function to
+	// each vertex.  In addition, color the vertices based on their height so we have
+	// sandy looking beaches, grassy low hills, and snow mountain peaks.
+	//
+
+	std::vector<Vertex> vertices(grid.Vertices.size());
+	for (size_t i = 0; i < grid.Vertices.size(); ++i)
+	{
+		auto& p = grid.Vertices[i].Position;
+		vertices[i].position = p;
+		vertices[i].position.y = GetHillsHeight(p.x, p.z);
+
+		// Color the vertex based on its height.
+		if (vertices[i].position.y < -10.0f)
+		{
+			// Sandy beach color.
+			vertices[i].color = XMFLOAT4(1.0f, 0.96f, 0.62f, 1.0f);
+		}
+		else if (vertices[i].position.y < 5.0f)
+		{
+			// Light yellow-green.
+			vertices[i].color = XMFLOAT4(0.48f, 0.77f, 0.46f, 1.0f);
+		}
+		else if (vertices[i].position.y < 12.0f)
+		{
+			// Dark yellow-green.
+			vertices[i].color = XMFLOAT4(0.1f, 0.48f, 0.19f, 1.0f);
+		}
+		else if (vertices[i].position.y < 20.0f)
+		{
+			// Dark brown.
+			vertices[i].color = XMFLOAT4(0.45f, 0.39f, 0.34f, 1.0f);
+		}
+		else
+		{
+			// White snow.
+			vertices[i].color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		}
+	}
+
+	std::vector<std::uint16_t> indices = grid.GetIndices16();
+
+	const uint32_t vertexBufferSize = sizeof(Vertex);
+	const uint32_t indexBufferSize = sizeof(uint16_t);
+
+	m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), vertexBufferSize, vertices.data());
+	m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), indexBufferSize, indices.data());
+
+	auto land = std::make_unique<RenderItem>(); 
+	land->world = XMMatrixIdentity() * XMMatrixScaling(0.5, 0.5, 0.5) * XMMatrixTranslation(0.0f, -10.0f, -20.f);
+	land->IndexCount = (UINT)indices.size();
+	land->StartIndexLocation = 0;
+	land->BaseVertexLocation = 0;
+
+	m_AllRenders.push_back(std::move(land));
+}
+
+float GameApp::GetHillsHeight(float x, float z) const
+{
+	return 0.3f * (z * sinf(0.1f * x) + x * cosf(0.1f * z));
 }

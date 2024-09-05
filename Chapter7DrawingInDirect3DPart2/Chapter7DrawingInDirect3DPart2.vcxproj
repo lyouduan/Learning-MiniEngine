@@ -57,6 +57,7 @@
     <ClInclude Include="Core\Resource\GpuBuffer.h" />
     <ClInclude Include="Core\Resource\LinearAllocator.h" />
     <ClInclude Include="Core\Resource\UploadBuffer.h" />
+    <ClInclude Include="Core\Utils\GeometryGenerator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Core\Command\CommandContext.cpp" />
@@ -79,6 +80,7 @@
     <ClCompile Include="GameApp.cpp" />
     <ClCompile Include="Core\Resource\GpuBuffer.cpp" />
     <ClCompile Include="Core\Resource\LinearAllocator.cpp" />
+    <ClCompile Include="Core\Utils\GeometryGenerator.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Core\Utils\pch.cpp" />
     <ClCompile Include="Core\Resource\PixelBuffer.cpp" />
