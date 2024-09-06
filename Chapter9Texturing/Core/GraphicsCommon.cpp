@@ -1,10 +1,22 @@
 #include "GraphicsCommon.h"
 #include "RootSignature.h"
 #include "PipelineState.h"
-
+#include "Texture.h"
+#include "SamplerManager.h"
 
 namespace Graphics
 {
+    // Static sampler
+    SamplerDesc SamplerLinearWrapDesc;
+    SamplerDesc SamplerAnisoWrapDesc;
+    SamplerDesc SamplerShadowDesc;
+    SamplerDesc SamplerLinearClampDesc;
+    SamplerDesc SamplerVolumeWrapDesc;
+    SamplerDesc SamplerPointClampDesc;
+    SamplerDesc SamplerPointBorderDesc;
+    SamplerDesc SamplerLinearBorderDesc;
+
+    // descriptor sampler
     D3D12_CPU_DESCRIPTOR_HANDLE SamplerLinearWrap;
     D3D12_CPU_DESCRIPTOR_HANDLE SamplerAnisoWrap;
     D3D12_CPU_DESCRIPTOR_HANDLE SamplerShadow;
@@ -13,6 +25,14 @@ namespace Graphics
     D3D12_CPU_DESCRIPTOR_HANDLE SamplerPointClamp;
     D3D12_CPU_DESCRIPTOR_HANDLE SamplerPointBorder;
     D3D12_CPU_DESCRIPTOR_HANDLE SamplerLinearBorder;
+
+    // texture arrays
+    Texture DefaultTextures[kNumDefaultTextures];
+    D3D12_CPU_DESCRIPTOR_HANDLE GetDefaultTexture(eDefaultTexture texID)
+    {
+        ASSERT(texID < kNumDefaultTextures);
+        return DefaultTextures[texID].GetSRV();
+    }
 
 
     D3D12_RASTERIZER_DESC RasterizerDefault;	// Clockwise
@@ -144,3 +164,4 @@ void Graphics::DestroyCommonState(void)
 {
 
 }
+

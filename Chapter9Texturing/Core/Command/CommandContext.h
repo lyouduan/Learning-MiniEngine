@@ -110,10 +110,10 @@ public:
 		return m_CpuLinearAllocator.Allocate(SizeInBytes);
 	}
 
-	//static void InitializeTexture(GpuResource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA SubData[]);
+	static void InitializeTexture(GpuResource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA SubData[]);
 	static void InitializeBuffer(GpuBuffer& Dest, const void* Data, size_t NumBytes, size_t DestOffset = 0);
 	static void InitializeBuffer(GpuBuffer& Dest, const UploadBuffer& Src, size_t SrcOffset, size_t NumBytes = -1, size_t DestOffset = 0);
-	//static void InitializeTextureArraySlice(GpuResource& Dest, UINT SliceIndex, GpuResource& Src);
+	static void InitializeTextureArraySlice(GpuResource& Dest, UINT SliceIndex, GpuResource& Src);
 
 	//void WriteBuffer(GpuResource& Dest, size_t DestOffset, const void* Data, size_t NumBytes);
 	//void FillBuffer(GpuResource& Dest, size_t DestOffset, DWParam Value, size_t NumBytes);

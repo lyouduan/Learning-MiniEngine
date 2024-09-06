@@ -101,6 +101,21 @@ void CommandContext::CopySubresource(GpuResource& Dest, UINT DestSubIndex, GpuRe
     m_CommandList->CopyTextureRegion(&DestLocation, 0, 0, 0, &SrcLocation, nullptr);
 }
 
+void CommandContext::InitializeTexture(GpuResource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA SubData[])
+{
+    UINT64 uploadBufferSize = GetRequiredIntermediateSize(Dest.GetResource(), 0, NumSubresources);
+
+    CommandContext& InitContext = CommandContext::Begin();
+
+    // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default texture
+    DynAlloc mem = InitContext.ReserveUploadMemory(uploadBufferSize);
+    UpdateSubresources(InitContext.m_CommandList, Dest.GetResource(), mem.Buffer.GetResource(), 0, 0, NumSubresources, SubData);
+    InitContext.TransitionResource(Dest, D3D12_RESOURCE_STATE_GENERIC_READ);
+
+    // Execute the command list and wait for it to finish so we can release the upload buffer
+    InitContext.Finish(true);
+}
+
 void CommandContext::InitializeBuffer(GpuBuffer& Dest, const void* Data, size_t NumBytes, size_t DestOffset)
 {
     CommandContext& InitContext = CommandContext::Begin();
@@ -134,6 +149,48 @@ void CommandContext::InitializeBuffer(GpuBuffer& Dest, const UploadBuffer& Src, 
 
     // Execute the command list and wait for it to finish so we can release the upload buffer
     InitContext.Finish(true);
+}
+
+void CommandContext::InitializeTextureArraySlice(GpuResource& Dest, UINT SliceIndex, GpuResource& Src)
+{
+    CommandContext& Context = CommandContext::Begin();
+
+    Context.TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST);
+    Context.FlushResourceBarriers();
+
+    const D3D12_RESOURCE_DESC& DestDesc = Dest.GetResource()->GetDesc();
+    const D3D12_RESOURCE_DESC& SrcDesc = Src.GetResource()->GetDesc();
+    
+    ASSERT(SliceIndex < DestDesc.DepthOrArraySize &&
+        SrcDesc.DepthOrArraySize == 1 &&
+        DestDesc.Width == SrcDesc.Width &&
+        DestDesc.Height == SrcDesc.Height &&
+        DestDesc.MipLevels <= SrcDesc.MipLevels
+    );
+
+    UINT SubResourceIndex = SliceIndex * DestDesc.MipLevels;
+
+    for (UINT i = 0; i < DestDesc.MipLevels; ++i)
+    {
+        D3D12_TEXTURE_COPY_LOCATION destCopyLocation =
+        {
+            Dest.GetResource(),
+            D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+            SubResourceIndex + i
+        };
+
+        D3D12_TEXTURE_COPY_LOCATION srcCopyLocation =
+        {
+            Src.GetResource(),
+            D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+            i
+        };
+
+        Context.m_CommandList->CopyTextureRegion(&destCopyLocation, 0, 0, 0, &srcCopyLocation, nullptr);
+    }
+
+    Context.TransitionResource(Dest, D3D12_RESOURCE_STATE_GENERIC_READ);
+    Context.Finish(true);
 }
 
 

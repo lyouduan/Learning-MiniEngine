@@ -40,6 +40,8 @@
     <ClCompile Include="Core\Resource\PixelBuffer.cpp" />
     <ClCompile Include="Core\Resource\UploadBuffer.cpp" />
     <ClCompile Include="Core\Utils\Color.cpp" />
+    <ClCompile Include="Core\Utils\DDSTextureLoader.cpp" />
+    <ClCompile Include="Core\Utils\FileUtility.cpp" />
     <ClCompile Include="Core\Utils\GameInput.cpp" />
     <ClCompile Include="Core\Utils\GeometryGenerator.cpp" />
     <ClCompile Include="Core\Utils\pch.cpp" />
@@ -47,6 +49,9 @@
     <ClCompile Include="Core\Utils\Waves.cpp" />
     <ClCompile Include="GameApp.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Core\Resource\Texture.cpp" />
+    <ClCompile Include="Core\Resource\SamplerManager.cpp" />
+    <ClCompile Include="Core\Resource\TextureManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Command\CommandAllocatorPool.h" />
@@ -81,6 +86,9 @@
     <ClInclude Include="Core\Resource\UploadBuffer.h" />
     <ClInclude Include="Core\Utils\Color.h" />
     <ClInclude Include="Core\Utils\d3dx12.h" />
+    <ClInclude Include="Core\Utils\dds.h" />
+    <ClInclude Include="Core\Utils\DDSTextureLoader.h" />
+    <ClInclude Include="Core\Utils\FileUtility.h" />
     <ClInclude Include="Core\Utils\GameInput.h" />
     <ClInclude Include="Core\Utils\GeometryGenerator.h" />
     <ClInclude Include="Core\Utils\Hash.h" />
@@ -90,6 +98,9 @@
     <ClInclude Include="Core\Utils\Waves.h" />
     <ClInclude Include="d3dUtil.h" />
     <ClInclude Include="GameApp.h" />
+    <ClInclude Include="Core\Resource\Texture.h" />
+    <ClInclude Include="Core\Resource\SamplerManager.h" />
+    <ClInclude Include="Core\Resource\TextureManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Core\Math\Functions.inl" />

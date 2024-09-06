@@ -1,7 +1,9 @@
 #pragma once
 
 #include "pch.h"
+#include "SamplerManager.h"
 
+class SamplerDesc;
 class CommandSignature;
 class RootSignature;
 class GraphicsPSO;
@@ -10,6 +12,24 @@ namespace Graphics
 {
 	void InitializeCommonState(void);
 	void DestroyCommonState(void);
+
+    extern SamplerDesc SamplerLinearWrapDesc;
+    extern SamplerDesc SamplerAnisoWrapDesc;
+    extern SamplerDesc SamplerShadowDesc;
+    extern SamplerDesc SamplerLinearClampDesc;
+    extern SamplerDesc SamplerVolumeWrapDesc;
+    extern SamplerDesc SamplerPointClampDesc;
+    extern SamplerDesc SamplerPointBorderDesc;
+    extern SamplerDesc SamplerLinearBorderDesc;
+
+    extern D3D12_CPU_DESCRIPTOR_HANDLE SamplerLinearWrap;
+    extern D3D12_CPU_DESCRIPTOR_HANDLE SamplerAnisoWrap;
+    extern D3D12_CPU_DESCRIPTOR_HANDLE SamplerShadow;
+    extern D3D12_CPU_DESCRIPTOR_HANDLE SamplerLinearClamp;
+    extern D3D12_CPU_DESCRIPTOR_HANDLE SamplerVolumeWrap;
+    extern D3D12_CPU_DESCRIPTOR_HANDLE SamplerPointClamp;
+    extern D3D12_CPU_DESCRIPTOR_HANDLE SamplerPointBorder;
+    extern D3D12_CPU_DESCRIPTOR_HANDLE SamplerLinearBorder;
 
     extern D3D12_RASTERIZER_DESC RasterizerDefault;
     extern D3D12_RASTERIZER_DESC RasterizerDefaultMsaa;
@@ -37,6 +57,19 @@ namespace Graphics
     extern CommandSignature DispatchIndirectCommandSignature;
     extern CommandSignature DrawIndirectCommandSignature;
     
+    enum eDefaultTexture
+    {
+        kMagenta2D,  // Useful for indicating missing textures
+        kBlackOpaque2D,
+        kBlackTransparent2D,
+        kWhiteOpaque2D,
+        kWhiteTransparent2D,
+        kDefaultNormalMap,
+        kBlackCubeMap,
+
+        kNumDefaultTextures
+    };
+    D3D12_CPU_DESCRIPTOR_HANDLE GetDefaultTexture(eDefaultTexture texID);
 
     extern RootSignature g_CommonRS;
     extern GraphicsPSO g_DownsampleDepthPSO;
