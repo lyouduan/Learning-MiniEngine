@@ -8,6 +8,8 @@
 #include "GameInput.h"
 #include <DirectXColors.h>
 #include "GeometryGenerator.h"
+#include "TextureManager.h"
+#include "DescriptorHeap.h"
 
 #include <d3dcompiler.h>
 
@@ -37,6 +39,8 @@ void GameApp::Startup(void)
 {
 	// prepare material
 	BuildMaterials();
+	// load Textures
+	LoadTextures();
 
 	// prepare shape and add material
 	BuildLandGeometry();
@@ -48,17 +52,22 @@ void GameApp::Startup(void)
 	BuildShapeRenderItems();
 
 	// initialize root signature
-	m_RootSignature.Reset(3, 0);
+	m_RootSignature.Reset(4, 1);
 	m_RootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
 	m_RootSignature[1].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_ALL);
 	m_RootSignature[2].InitAsConstantBuffer(2, D3D12_SHADER_VISIBILITY_ALL);
+	m_RootSignature[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+	// sampler
+	m_RootSignature.InitStaticSampler(0, Graphics::SamplerLinearClampDesc, D3D12_SHADER_VISIBILITY_PIXEL);
+
 	m_RootSignature.Finalize(L"root sinature", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 	
 	// shader input layout
 	D3D12_INPUT_ELEMENT_DESC mInputLayout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 
 	DXGI_FORMAT ColorFormat = g_DisplayPlane[g_CurrentBuffer].GetFormat();
@@ -191,10 +200,10 @@ void GameApp::RenderScene(void)
 	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
 	// draw call
-	if (m_bRenderShapes)
-		DrawRenderItems(gfxContext, m_ShapeRenders);
-	else
-		DrawRenderItems(gfxContext, m_LandRenders);
+	//if (m_bRenderShapes)
+	//	DrawRenderItems(gfxContext, m_ShapeRenders);
+	//else
+	DrawRenderItems(gfxContext, m_LandRenders);
 	
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 
@@ -302,7 +311,12 @@ void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<std::uniq
 		matCB.DiffuseAlbedo = iter->Mat->DiffuseAlbedo;
 		matCB.FresnelR0 = iter->Mat->FresnelR0;
 		matCB.Roughness = iter->Mat->Roughness;
+		// constants
 		gfxContext.SetDynamicConstantBufferView(2, sizeof(MaterialConstants), &matCB);
+
+		// srv
+		gfxContext.SetDynamicDescriptor(3, 0, iter->srv);
+
 		gfxContext.DrawIndexedInstanced(iter->IndexCount, 1, iter->StartIndexLocation, iter->BaseVertexLocation, 0);
 	}
 }
@@ -317,6 +331,7 @@ void GameApp::BuildLandRenderItems()
 	land->IndexCount = land->Geo->DrawArgs["land"].IndexCount;
 	land->BaseVertexLocation = land->Geo->DrawArgs["land"].BaseVertexLocation;
 	land->StartIndexLocation = land->Geo->DrawArgs["land"].StartIndexLocation;
+	land->srv = m_Textures["grass"];
 
 	m_LandRenders.push_back(std::move(land));
 
@@ -328,6 +343,7 @@ void GameApp::BuildLandRenderItems()
 	wave->IndexCount = wave->Geo->DrawArgs["wave"].IndexCount;
 	wave->BaseVertexLocation = wave->Geo->DrawArgs["wave"].BaseVertexLocation;
 	wave->StartIndexLocation = wave->Geo->DrawArgs["wave"].StartIndexLocation;
+	wave->srv = m_Textures["water"];
 
 	m_LandRenders.push_back(std::move(wave));
 }
@@ -350,6 +366,7 @@ void GameApp::BuildLandGeometry()
 		vertices[i].position = p;
 		vertices[i].position.y = GetHillsHeight(p.x, p.z);
 		vertices[i].normal = GetHillsNormal(p.x, p.z);
+		vertices[i].tex = grid.Vertices[i].TexC;
 	}
 
 	std::vector<std::uint16_t> indices = grid.GetIndices16();
@@ -552,9 +569,12 @@ void GameApp::UpdateWaves(float deltaT)
 
 		v.position = mWaves->Position(i);
 		v.normal = mWaves->Normal(i);
+		v.tex.x = 0.5f + v.position.x / mWaves->Width();
+		v.tex.y = 0.5f - v.position.y / mWaves->Depth();
 
 		m_VerticesWaves.push_back(v);
 	}
+	AnimateMaterials(deltaT);
 
 	m_Geometry["waveGeo"]->m_VertexBuffer.Create(L"vertex buffer", m_VerticesWaves.size(), sizeof(Vertex), m_VerticesWaves.data());
 }
@@ -563,17 +583,17 @@ void GameApp::BuildMaterials()
 {
 	auto grass = std::make_unique<Material>();
 	grass->Name = "grass";
-	grass->DiffuseAlbedo = XMFLOAT4(0.2f, 0.6f, 0.2f, 1.0f);
-	grass->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
-	grass->Roughness = 0.125f;
+	grass->DiffuseAlbedo = XMFLOAT4(1.0, 1.0, 1.0, 1.0f);
+	grass->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
+	grass->Roughness = 0.8f;
 
 	// This is not a good water material definition, but we do not have all the rendering
 	// tools we need (transparency, environment reflection), so we fake it for now.
 	auto water = std::make_unique<Material>();
 	water->Name = "water";
-	water->DiffuseAlbedo = XMFLOAT4(0.0f, 0.2f, 0.6f, 1.0f);
-	water->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
-	water->Roughness = 0.0f;
+	water->DiffuseAlbedo = XMFLOAT4(1.0, 1.0, 1.0, 1.0f);
+	water->FresnelR0 = XMFLOAT3(0.5f, 0.5f, 0.8f);
+	water->Roughness = 0.3f;
 
 	auto bricks0 = std::make_unique<Material>();
 	bricks0->Name = "bricks0";
@@ -613,5 +633,30 @@ void GameApp::BuildMaterials()
 	m_Materials["stone0"] = std::move(stone0);
 	m_Materials["tile0"] = std::move(tile0);
 	m_Materials["skullMat"] = std::move(skullMat);
+}
+
+void GameApp::LoadTextures()
+{
+	TextureManager::Initialize(L"Loading Textures");
+
+	auto grassTex = TextureManager::LoadDDSFromFile(L"textures/grass.dds");
+	if (grassTex.IsValid())
+	{
+		m_Textures["grass"] = grassTex.GetSRV();
+	}
+
+	auto waterTex = TextureManager::LoadDDSFromFile(L"textures/water1.dds");
+	if (waterTex.IsValid())
+	{
+		m_Textures["water"] = waterTex.GetSRV();
+	}
+
+	Utility::Printf("Found %u textures\n", m_Textures.size());
+	
+}
+
+void GameApp::AnimateMaterials(float deltaT)
+{
+	
 }
 

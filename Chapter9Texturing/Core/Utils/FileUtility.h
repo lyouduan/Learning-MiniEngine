@@ -22,7 +22,7 @@ namespace Utility
 {
     using namespace std;
     using namespace concurrency;
-
+    
     typedef shared_ptr<vector<std::byte> > ByteArray;
     extern ByteArray NullFile;
 

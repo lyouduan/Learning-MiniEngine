@@ -49,8 +49,8 @@ void ContextManager::FreeContext(CommandContext* UsedContext)
 
 CommandContext::CommandContext(D3D12_COMMAND_LIST_TYPE Type) :
     m_Type(Type),
-    //m_DynamicViewDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
-    //m_DynamicSamplerDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
+    m_DynamicViewDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
+    m_DynamicSamplerDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
     m_CpuLinearAllocator(kCpuWritable), /*upload buffer*/
     m_GpuLinearAllocator(kGpuExclusive)/*default buffer*/
 {
@@ -350,8 +350,8 @@ CommandContext::~CommandContext(void)
 }
 void CommandContext::DestroyAllContexts(void)
 {
-    //LinearAllocator::DestroyAll();
-    //DynamicDescriptorHeap::DestroyAll();
+    LinearAllocator::DestroyAll();
+    DynamicDescriptorHeap::DestroyAll();
     g_ContextManager.DestroyAllContexts();
 
 }
@@ -397,8 +397,8 @@ uint64_t CommandContext::Finish(bool WaitForCompletion)
 
     m_CpuLinearAllocator.CleanupUsedPages(FenceValue);
     m_GpuLinearAllocator.CleanupUsedPages(FenceValue);
-    //m_DynamicViewDescriptorHeap.CleanupUsedHeaps(FenceValue);
-    //m_DynamicSamplerDescriptorHeap.CleanupUsedHeaps(FenceValue);
+    m_DynamicViewDescriptorHeap.CleanupUsedHeaps(FenceValue);
+    m_DynamicSamplerDescriptorHeap.CleanupUsedHeaps(FenceValue);
 
     if (WaitForCompletion)
         g_CommandManager.WaitForFence(FenceValue);
@@ -468,8 +468,8 @@ void GraphicsContext::SetRootSignature(const RootSignature& RootSig)
         return;
     m_CommandList->SetGraphicsRootSignature(m_CurGraphicsRootSignature = RootSig.GetSignature());
 
-    //m_DynamicViewDescriptorHeap.ParseGraphicsRootSignature(RootSig);
-    //m_DynamicSamplerDescriptorHeap.ParseGraphicsRootSignature(RootSig);
+    m_DynamicViewDescriptorHeap.ParseGraphicsRootSignature(RootSig);
+    m_DynamicSamplerDescriptorHeap.ParseGraphicsRootSignature(RootSig);
 }
 
 void GraphicsContext::SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[], D3D12_CPU_DESCRIPTOR_HANDLE DSV)

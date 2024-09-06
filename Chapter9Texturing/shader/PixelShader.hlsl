@@ -10,7 +10,10 @@ float4 main(VertexOut input) : SV_TARGET
     
     const float shininess = 1.0f - materialConstants.gRoughness;
     
-    Material mat = { materialConstants.gDiffuseAlbedo, materialConstants.gFresnelR0, shininess };
+    // sample
+    float4 diffuseAlbedo = gDiffuseMap.Sample(gsamLinearClamp, input.tex) * materialConstants.gDiffuseAlbedo;
+    
+    Material mat = { diffuseAlbedo, materialConstants.gFresnelR0, shininess };
     float3 shadowFactor = 1.0f;
     float4 directLight = ComputeLighting(passConstants.Lights, mat, input.positionW,
         input.normal, toEyeW, shadowFactor);

@@ -63,6 +63,55 @@ namespace Graphics
 
 void Graphics::InitializeCommonState(void)
 {
+    // Sampler
+    SamplerLinearWrapDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+    SamplerLinearWrap = SamplerLinearWrapDesc.CreateDescriptor();
+
+    SamplerAnisoWrapDesc.MaxAnisotropy = 4;
+    SamplerAnisoWrap = SamplerAnisoWrapDesc.CreateDescriptor();
+
+    SamplerShadowDesc.Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+    SamplerShadowDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+    SamplerShadowDesc.SetTextureAddressMode(D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+    SamplerShadow = SamplerShadowDesc.CreateDescriptor();
+
+    SamplerLinearClampDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+    SamplerLinearClampDesc.SetTextureAddressMode(D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+    SamplerLinearClamp = SamplerLinearClampDesc.CreateDescriptor();
+
+    SamplerVolumeWrapDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+    SamplerVolumeWrap = SamplerVolumeWrapDesc.CreateDescriptor();
+
+    SamplerPointClampDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+    SamplerPointClampDesc.SetTextureAddressMode(D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+    SamplerPointClamp = SamplerPointClampDesc.CreateDescriptor();
+
+    SamplerLinearBorderDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+    SamplerLinearBorderDesc.SetTextureAddressMode(D3D12_TEXTURE_ADDRESS_MODE_BORDER);
+    SamplerLinearBorderDesc.SetBorderColor(Color(0.0f, 0.0f, 0.0f, 0.0f));
+    SamplerLinearBorder = SamplerLinearBorderDesc.CreateDescriptor();
+
+    SamplerPointBorderDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+    SamplerPointBorderDesc.SetTextureAddressMode(D3D12_TEXTURE_ADDRESS_MODE_BORDER);
+    SamplerPointBorderDesc.SetBorderColor(Color(0.0f, 0.0f, 0.0f, 0.0f));
+    SamplerPointBorder = SamplerPointBorderDesc.CreateDescriptor();
+
+    // default texture
+    uint32_t MagentaPixel = 0xFFFF00FF; //R8=FF, G8=00, B8=FF, A8=FF, Little Endian
+    DefaultTextures[kMagenta2D].Create2D(4, 1, 1, DXGI_FORMAT_R8G8B8A8_UNORM, &MagentaPixel);
+    uint32_t BlackOpaqueTexel = 0xFF000000; // A8 B8 G8 R8
+    DefaultTextures[kBlackOpaque2D].Create2D(4, 1, 1, DXGI_FORMAT_R8G8B8A8_UNORM, &BlackOpaqueTexel);
+    uint32_t BlackTransparentTexel = 0x00000000;
+    DefaultTextures[kBlackTransparent2D].Create2D(4, 1, 1, DXGI_FORMAT_R8G8B8A8_UNORM, &BlackTransparentTexel);
+    uint32_t WhiteOpaqueTexel = 0xFFFFFFFF;
+    DefaultTextures[kWhiteOpaque2D].Create2D(4, 1, 1, DXGI_FORMAT_R8G8B8A8_UNORM, &WhiteOpaqueTexel);
+    uint32_t WhiteTransparentTexel = 0x00FFFFFF;
+    DefaultTextures[kWhiteTransparent2D].Create2D(4, 1, 1, DXGI_FORMAT_R8G8B8A8_UNORM, &WhiteTransparentTexel);
+    uint32_t FlatNormalTexel = 0x00FF8080;
+    DefaultTextures[kDefaultNormalMap].Create2D(4, 1, 1, DXGI_FORMAT_R8G8B8A8_UNORM, &FlatNormalTexel);
+    uint32_t BlackCubeTexels[6] = {};
+    DefaultTextures[kBlackCubeMap].CreateCube(4, 1, 1, DXGI_FORMAT_R8G8B8A8_UNORM, BlackCubeTexels);
+
     // Default rasterizer states
     RasterizerDefault.FillMode = D3D12_FILL_MODE_SOLID;
     RasterizerDefault.CullMode = D3D12_CULL_MODE_BACK;
@@ -162,6 +211,8 @@ void Graphics::InitializeCommonState(void)
 
 void Graphics::DestroyCommonState(void)
 {
+    for (uint32_t i = 0; i < kNumDefaultTextures; ++i)
+        DefaultTextures[i].Destroy();
 
 }
 

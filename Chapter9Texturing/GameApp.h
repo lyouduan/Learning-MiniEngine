@@ -8,12 +8,15 @@
 #include "Waves.h"
 #include "d3dUtil.h"
 #include <memory>
+#include "TextureManager.h"
 
 // render item
 struct RenderItem
 {
 	RenderItem() = default;
 	DirectX::XMMATRIX World;
+	DirectX::XMMATRIX TexTransform;
+	DirectX::XMMATRIX MatTransform;
 
 	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
@@ -24,6 +27,8 @@ struct RenderItem
 	UINT IndexCount = 0;
 	UINT StartIndexLocation = 0;
 	UINT BaseVertexLocation = 0;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE srv; // point to shader resource view
 };
 
 class GameApp : public GameCore::IGameApp
@@ -51,9 +56,10 @@ private:
 	float GetHillsHeight(float x, float z)const;
 	DirectX::XMFLOAT3 GetHillsNormal(float x, float z)const;
 	void UpdateWaves(float deltaT);
+	void AnimateMaterials(float deltaT);
 
 	void BuildMaterials();
-
+	void LoadTextures();
 	RootSignature m_RootSignature;
 	GraphicsPSO m_PSO;
 
@@ -73,6 +79,8 @@ private:
 	std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
 	// geometry
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometry;
+	// texture manager
+	std::unordered_map<std::string, D3D12_CPU_DESCRIPTOR_HANDLE> m_Textures;
 
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;

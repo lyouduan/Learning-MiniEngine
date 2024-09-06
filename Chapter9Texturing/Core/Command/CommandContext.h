@@ -7,7 +7,7 @@
 #include "ColorBuffer.h"
 #include "DepthBuffer.h"
 #include "LinearAllocator.h"
-//#include "DynamicDescriptorHeap.h"
+#include "DynamicDescriptorHeap.h"
 
 #include <queue>
 
@@ -141,8 +141,8 @@ protected:
 	ID3D12RootSignature* m_CurComputeRootSignature;
 	ID3D12PipelineState* m_CurPipelineState;
 
-	//DynamicDescriptorHeap m_DynamicViewDescriptorHeap;		// HEAP_TYPE_CBV_SRV_UAV
-	//DynamicDescriptorHeap m_DynamicSamplerDescriptorHeap;	// HEAP_TYPE_SAMPLER
+	DynamicDescriptorHeap m_DynamicViewDescriptorHeap;		// HEAP_TYPE_CBV_SRV_UAV
+	DynamicDescriptorHeap m_DynamicSamplerDescriptorHeap;	// HEAP_TYPE_SAMPLER
 
 	D3D12_RESOURCE_BARRIER m_ResourceBarrierBuffer[16];
 	UINT m_NumBarriersToFlush;
@@ -278,7 +278,7 @@ inline void GraphicsContext::SetDescriptorTable(UINT RootIndex, D3D12_GPU_DESCRI
 
 inline void GraphicsContext::SetDynamicSamplers(UINT RootIndex, UINT Offset, UINT Count, const D3D12_CPU_DESCRIPTOR_HANDLE Handles[])
 {
-	//m_DynamicSamplerDescriptorHeap.SetGraphicsDescriptorHandles(RootIndex, Offset, Count, Handles);
+	m_DynamicSamplerDescriptorHeap.SetGraphicsDescriptorHandles(RootIndex, Offset, Count, Handles);
 }
 
 
@@ -290,7 +290,7 @@ inline void GraphicsContext::SetDynamicSampler(UINT RootIndex, UINT Offset, D3D1
 
 inline void GraphicsContext::SetDynamicDescriptors(UINT RootIndex, UINT Offset, UINT Count, const D3D12_CPU_DESCRIPTOR_HANDLE Handles[])
 {
-	//m_DynamicViewDescriptorHeap.SetGraphicsDescriptorHandles(RootIndex, Offset, Count, Handles);
+	m_DynamicViewDescriptorHeap.SetGraphicsDescriptorHandles(RootIndex, Offset, Count, Handles);
 }
 
 

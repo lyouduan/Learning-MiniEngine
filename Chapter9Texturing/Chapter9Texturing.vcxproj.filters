@@ -114,6 +114,9 @@
     <ClCompile Include="Core\Utils\FileUtility.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Core\Resource\DynamicDescriptorHeap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Command\CommandAllocatorPool.h">
@@ -257,10 +260,19 @@
     <ClInclude Include="Core\Utils\FileUtility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Core\Resource\DynamicDescriptorHeap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Core\Math\Functions.inl">
       <Filter>Header Files</Filter>
     </None>
+    <None Include="shader\common.hlsli" />
+    <None Include="shader\LightingUtil.hlsli" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="shader\VertexShader.hlsl" />
+    <FxCompile Include="shader\PixelShader.hlsl" />
   </ItemGroup>
 </Project>

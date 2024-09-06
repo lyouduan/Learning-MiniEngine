@@ -81,7 +81,7 @@ private:
 class DescriptorHeap
 {
 public:
-	DescriptorHeap(void){}
+	DescriptorHeap(void) {}
 	~DescriptorHeap(void) { Destroy(); }
 
 	void Create(const std::wstring& DebugHeapName, D3D12_DESCRIPTOR_HEAP_TYPE Type, uint32_t MaxCount);

@@ -25,6 +25,7 @@
     <ClInclude Include="Core\d3dx12.h" />
     <ClInclude Include="Core\Display.h" />
     <ClInclude Include="Core\GameCore.h" />
+    <ClInclude Include="Core\Resource\DynamicDescriptorHeap.h" />
     <ClInclude Include="Core\Utils\GameInput.h" />
     <ClInclude Include="Core\GraphicsCommon.h" />
     <ClInclude Include="Core\GraphicsCore.h" />
@@ -45,7 +46,6 @@
     <ClInclude Include="Core\Resource\ColorBuffer.h" />
     <ClInclude Include="Core\Resource\DepthBuffer.h" />
     <ClInclude Include="Core\Resource\DescriptorHeap.h" />
-    <ClInclude Include="Core\Resource\DynamicDescriptorHeap.h" />
     <ClInclude Include="Core\Resource\GpuBuffer.h" />
     <ClInclude Include="Core\Resource\GpuResource.h" />
     <ClInclude Include="Core\Resource\LinearAllocator.h" />

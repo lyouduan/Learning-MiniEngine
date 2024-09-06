@@ -33,7 +33,7 @@ ByteArray ReadFileHelper(const wstring& fileName)
     if (fileExists == -1)
         return NullFile;
 
-    ifstream file( fileName, ios::in | ios::binary );
+    ifstream file(fileName, ios::in | ios::binary );
     if (!file)
         return NullFile;
 

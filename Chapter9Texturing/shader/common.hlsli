@@ -38,16 +38,22 @@ ConstantBuffer<ObjConstants> objConstants : register(b0);
 ConstantBuffer<PassConstants> passConstants : register(b1);
 ConstantBuffer<MaterialConstants> materialConstants : register(b2);
 
+Texture2D gDiffuseMap : register(t0);
+
+SamplerState gsamLinearClamp : register(s0);
+
 struct VertexIn
 {
     float3 position : POSITION;
     float3 normal : NORMAL;
+    float2 tex : TEXCOORD;
 };
 
 struct VertexOut
 {
     float3 normal : NORMAL;
     float3 positionW : POSITION;
+    float2 tex : TEXCOORD;
     float4 positionH : SV_Position; // only omit at last one
 };
 

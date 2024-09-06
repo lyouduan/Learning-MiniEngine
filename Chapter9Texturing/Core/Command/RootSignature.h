@@ -105,7 +105,7 @@ protected:
 // Static samplers = 0 DWORDS (compiled into shader)
 class RootSignature
 {
-    //friend class DynamicDescriptorHeap;
+    friend class DynamicDescriptorHeap;
 
 public:
 
