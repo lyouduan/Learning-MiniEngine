@@ -102,6 +102,13 @@ void GameApp::Startup(void)
 	transpacrentPSO.Finalize();
 	m_PSOs["transparent"] = transpacrentPSO;
 
+	GraphicsPSO alphaTestedPSO = opaquePSO;
+	auto rater = RasterizerDefault;
+	rater.CullMode = D3D12_CULL_MODE_NONE; // not cull 
+	alphaTestedPSO.SetRasterizerState(rater);
+	alphaTestedPSO.Finalize();
+	m_PSOs["alphaTested"] = alphaTestedPSO;
+
 }
 
 void GameApp::Cleanup(void)
@@ -228,6 +235,9 @@ void GameApp::RenderScene(void)
 
 		gfxContext.SetPipelineState(m_PSOs["transparent"]);
 		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::Transparent]);
+
+		gfxContext.SetPipelineState(m_PSOs["alphaTested"]);
+		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::AlphaTested]);
 	}
 		
 	
@@ -395,12 +405,12 @@ void GameApp::BuildLandRenderItems()
 	auto box = std::make_unique<RenderItem>();
 	box->World = XMMatrixIdentity() * XMMatrixTranslation(.0f, -12.0f, -30.f);
 	box->Geo = m_Geometry["boxGeo"].get();
-	box->Mat = m_Materials["bricks0"].get();
+	box->Mat = m_Materials["wirefence"].get();
 	box->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	box->IndexCount = box->Geo->DrawArgs["sbox"].IndexCount;
 	box->BaseVertexLocation = box->Geo->DrawArgs["sbox"].BaseVertexLocation;
 	box->StartIndexLocation = box->Geo->DrawArgs["sbox"].StartIndexLocation;
-	box->srv = m_Textures["wood"].GetSRV();
+	box->srv = m_Textures["wireFence"].GetSRV();
 
 	m_LandRenders[(int)RenderLayer::AlphaTested].push_back(std::move(box));
 	//m_LandRenders.push_back(std::move(box));
@@ -636,15 +646,15 @@ void GameApp::BuildMaterials()
 	auto grass = std::make_unique<Material>();
 	grass->Name = "grass";
 	grass->DiffuseAlbedo = XMFLOAT4(1.0, 1.0, 1.0, 1.0f);
-	grass->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
-	grass->Roughness = 0.8f;
+	grass->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
+	grass->Roughness = 0.125f;
 
 	// This is not a good water material definition, but we do not have all the rendering
 	// tools we need (transparency, environment reflection), so we fake it for now.
 	auto water = std::make_unique<Material>();
 	water->Name = "water";
 	water->DiffuseAlbedo = XMFLOAT4(1.0, 1.0, 1.0, 0.5f);
-	water->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
+	water->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
 	water->Roughness = 0.0f;
 
 	auto bricks0 = std::make_unique<Material>();
@@ -679,12 +689,19 @@ void GameApp::BuildMaterials()
 	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
 	skullMat->Roughness = 0.3f;
 
+	auto wirefence = std::make_unique<Material>();
+	wirefence->Name = "wirefence";
+	wirefence->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	wirefence->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
+	wirefence->Roughness = 0.25f;
+
 	m_Materials["grass"] = std::move(grass);
 	m_Materials["water"] = std::move(water);
 	m_Materials["bricks0"] = std::move(bricks0);
 	m_Materials["stone0"] = std::move(stone0);
 	m_Materials["tile0"] = std::move(tile0);
 	m_Materials["skullMat"] = std::move(skullMat);
+	m_Materials["wirefence"] = std::move(wirefence);
 }
 
 void GameApp::LoadTextures()
