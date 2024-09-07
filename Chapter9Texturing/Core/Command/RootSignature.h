@@ -166,12 +166,14 @@ protected:
     UINT m_NumSamplers;
     UINT m_NumInitializedStaticSamplers;
 
+    // 用于实现动态描述符堆的更新缓存
     // One bit is set for root parameters that are non-sampler descriptor tables
     uint32_t m_DescriptorTableBitMap;
     // One bit is set for root parameters that are sampler descriptor tables
     uint32_t m_SamplerTableBitMap;
     // Non-sampler descriptor tables need to know their descriptor count
     uint32_t m_DescriptorTableSize[16];
+
 
     // RootParameter array
     std::unique_ptr<RootParameter[]> m_ParamArray;

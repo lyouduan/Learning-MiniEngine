@@ -30,6 +30,8 @@ struct RenderItem
 	D3D12_CPU_DESCRIPTOR_HANDLE srv; // point to shader resource view
 };
 
+class GraphicsContext;
+
 class GameApp : public GameCore::IGameApp
 {
 public:

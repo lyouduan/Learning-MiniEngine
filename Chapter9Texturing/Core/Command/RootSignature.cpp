@@ -16,6 +16,7 @@ void RootSignature::DestroyAll(void)
     s_RootSignatureHashMap.clear();
 }
 
+// 初始化静态采样器
 void RootSignature::InitStaticSampler(UINT Register, const D3D12_SAMPLER_DESC& NonStaticSamplerDesc, D3D12_SHADER_VISIBILITY Visibility)
 {
 	ASSERT(m_NumInitializedStaticSamplers < m_NumSamplers);
@@ -104,6 +105,7 @@ void RootSignature::Finalize(const std::wstring& name, D3D12_ROOT_SIGNATURE_FLAG
             HashCode = Utility::HashState(RootParam.DescriptorTable.pDescriptorRanges,
                 RootParam.DescriptorTable.NumDescriptorRanges, HashCode);
 
+            // 使用位图标记描述符表和采样器
             // We keep track of sampler descriptor tables separately from CBV_SRV_UAV descriptor tables
             if (RootParam.DescriptorTable.pDescriptorRanges->RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER)
                 m_SamplerTableBitMap |= (1 << Param);

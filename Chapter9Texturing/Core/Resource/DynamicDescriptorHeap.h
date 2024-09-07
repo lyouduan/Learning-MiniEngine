@@ -78,7 +78,9 @@ private:
 	static std::queue<ID3D12DescriptorHeap*> sm_AvailableDescriptorHeaps[2];
 
 	// static methods
+	// request the descriptor heap
 	static ID3D12DescriptorHeap* RequestDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE HeapType);
+	// release the descriptor heap
 	static void DiscardDescriptorHeaps(D3D12_DESCRIPTOR_HEAP_TYPE HeapType, uint64_t FenceValue,
 		const std::vector<ID3D12DescriptorHeap*>& UsedHeaps);
 
@@ -115,8 +117,9 @@ private:
 			m_MaxCachedDescriptors = 0;
 		}
 
+		// 位图用于标记
 		uint32_t m_RootDescriptorTablesBitMap;
-		uint32_t m_StaleRootParamsBitMap;
+		uint32_t m_StaleRootParamsBitMap; 
 		uint32_t m_MaxCachedDescriptors;
 
 		static const uint32_t kMaxNumDescriptors = 256;
@@ -136,9 +139,11 @@ private:
 
 	};
 
+	// cache
 	DescriptorHandleCache m_GraphicsHandleCache;
 	DescriptorHandleCache m_ComputeHandleCache;
 
+	// check the space of current heap
 	bool HasSpace(uint32_t Count)
 	{
 		return (m_CurrentHeapPtr != nullptr && m_CurrentOffset + Count <= kNumDescriptorsPerHeap);
@@ -148,6 +153,7 @@ private:
 	void RetireUsedHeaps(uint64_t fenceValue);
 	ID3D12DescriptorHeap* GetHeapPointer();
 
+	// allocate the current heap
 	DescriptorHandle Allocate(UINT Count)
 	{
 		DescriptorHandle ret = m_FirstDescriptor + m_CurrentOffset * m_DescriptorSize;
@@ -155,6 +161,7 @@ private:
 		return ret;
 	}
 
+	// copy the cache to the GPU and bind the root slot
 	void CopyAndBindStagedTables(DescriptorHandleCache& HandleCache, ID3D12GraphicsCommandList* CmdList,
 		void (STDMETHODCALLTYPE ID3D12GraphicsCommandList::* SetFunc)(UINT, D3D12_GPU_DESCRIPTOR_HANDLE));
 
