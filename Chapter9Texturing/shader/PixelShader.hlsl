@@ -1,6 +1,10 @@
 #include "common.hlsli"
 #include "LightingUtil.hlsli"
 
+Texture2D gDiffuseMap : register(t0);
+
+SamplerState gsamLinearClamp : register(s0);
+
 float4 main(VertexOut input) : SV_TARGET
 {
     input.normal = normalize(input.normal);
@@ -21,5 +25,5 @@ float4 main(VertexOut input) : SV_TARGET
     float4 litColor = ambient + directLight;
     litColor.a = materialConstants.gDiffuseAlbedo.a;
     
-    return litColor;
+    return gDiffuseMap.Sample(gsamLinearClamp, input.tex);
 }

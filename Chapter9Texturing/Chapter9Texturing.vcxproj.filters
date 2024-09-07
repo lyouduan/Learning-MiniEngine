@@ -99,9 +99,6 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Core\Resource\Texture.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Core\Utils\DDSTextureLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -115,6 +112,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Core\Resource\DynamicDescriptorHeap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Resource\Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -242,9 +242,6 @@
     <ClInclude Include="GameApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Core\Resource\Texture.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Core\Utils\DDSTextureLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -261,6 +258,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Core\Resource\DynamicDescriptorHeap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Resource\Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

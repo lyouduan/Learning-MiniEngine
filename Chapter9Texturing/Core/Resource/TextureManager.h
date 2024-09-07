@@ -33,13 +33,13 @@ namespace TextureManager
     using Graphics::eDefaultTexture;
     using Graphics::kMagenta2D;
 
-    void Initialize(const std::wstring& RootPath);
+    void Initialize( const std::wstring& RootPath );
     void Shutdown(void);
 
     // Load a texture from a DDS file.  Never returns null references, but if a 
     // texture cannot be found, ref->IsValid() will return false.
-    TextureRef LoadDDSFromFile(const std::wstring& filePath, eDefaultTexture fallback = kMagenta2D, bool sRGB = false);
-    TextureRef LoadDDSFromFile(const std::string& filePath, eDefaultTexture fallback = kMagenta2D, bool sRGB = false);
+    TextureRef LoadDDSFromFile( const std::wstring& filePath, eDefaultTexture fallback = kMagenta2D, bool sRGB = false );
+    TextureRef LoadDDSFromFile( const std::string& filePath, eDefaultTexture fallback = kMagenta2D, bool sRGB = false );
 }
 
 // Forward declaration; private implementation
@@ -54,8 +54,8 @@ class TextureRef
 {
 public:
 
-    TextureRef(const TextureRef& ref);
-    TextureRef(ManagedTexture* tex = nullptr);
+    TextureRef( const TextureRef& ref );
+    TextureRef( ManagedTexture* tex = nullptr );
     ~TextureRef();
 
     void operator= (std::nullptr_t);
@@ -70,9 +70,9 @@ public:
 
     // Get the texture pointer.  Client is responsible to not dereference
     // null pointers.
-    const Texture* Get(void) const;
+    const Texture* Get( void ) const;
 
-    const Texture* operator->(void) const;
+    const Texture* operator->( void ) const;
 
 private:
     ManagedTexture* m_ref;

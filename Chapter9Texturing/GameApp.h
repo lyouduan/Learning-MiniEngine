@@ -80,7 +80,8 @@ private:
 	// geometry
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometry;
 	// texture manager
-	std::unordered_map<std::string, D3D12_CPU_DESCRIPTOR_HANDLE> m_Textures;
+	//std::unordered_map<std::string, D3D12_CPU_DESCRIPTOR_HANDLE> m_Textures; // 直接引用handle不行？
+	std::unordered_map<std::string, TextureRef> m_Textures; // work
 
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;

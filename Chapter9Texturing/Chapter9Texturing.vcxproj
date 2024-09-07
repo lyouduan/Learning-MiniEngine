@@ -38,6 +38,7 @@
     <ClCompile Include="Core\Resource\GpuBuffer.cpp" />
     <ClCompile Include="Core\Resource\LinearAllocator.cpp" />
     <ClCompile Include="Core\Resource\PixelBuffer.cpp" />
+    <ClCompile Include="Core\Resource\Texture.cpp" />
     <ClCompile Include="Core\Resource\UploadBuffer.cpp" />
     <ClCompile Include="Core\Utils\Color.cpp" />
     <ClCompile Include="Core\Utils\DDSTextureLoader.cpp" />
@@ -50,7 +51,6 @@
     <ClCompile Include="Core\Resource\DynamicDescriptorHeap.cpp" />
     <ClCompile Include="GameApp.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Core\Resource\Texture.cpp" />
     <ClCompile Include="Core\Resource\SamplerManager.cpp" />
     <ClCompile Include="Core\Resource\TextureManager.cpp" />
   </ItemGroup>
@@ -84,6 +84,7 @@
     <ClInclude Include="Core\Resource\GpuResource.h" />
     <ClInclude Include="Core\Resource\LinearAllocator.h" />
     <ClInclude Include="Core\Resource\PixelBuffer.h" />
+    <ClInclude Include="Core\Resource\Texture.h" />
     <ClInclude Include="Core\Resource\UploadBuffer.h" />
     <ClInclude Include="Core\Utils\Color.h" />
     <ClInclude Include="Core\Utils\d3dx12.h" />
@@ -100,7 +101,6 @@
     <ClInclude Include="d3dUtil.h" />
     <ClInclude Include="Core\Resource\DynamicDescriptorHeap.h" />
     <ClInclude Include="GameApp.h" />
-    <ClInclude Include="Core\Resource\Texture.h" />
     <ClInclude Include="Core\Resource\SamplerManager.h" />
     <ClInclude Include="Core\Resource\TextureManager.h" />
   </ItemGroup>
@@ -197,6 +197,9 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <FxCompile>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -216,6 +219,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <FxCompile>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -231,6 +237,9 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <FxCompile>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -250,6 +259,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <FxCompile>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

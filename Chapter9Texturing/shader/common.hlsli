@@ -7,6 +7,7 @@
 struct ObjConstants
 {
     float4x4 gWorld;
+    float4x4 gTexTransform;
 };
 
 struct Light
@@ -37,10 +38,6 @@ struct MaterialConstants
 ConstantBuffer<ObjConstants> objConstants : register(b0);
 ConstantBuffer<PassConstants> passConstants : register(b1);
 ConstantBuffer<MaterialConstants> materialConstants : register(b2);
-
-Texture2D gDiffuseMap : register(t0);
-
-SamplerState gsamLinearClamp : register(s0);
 
 struct VertexIn
 {

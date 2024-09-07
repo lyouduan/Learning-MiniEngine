@@ -252,8 +252,8 @@ inline void GraphicsContext::DrawIndexedInstanced(UINT IndexCountPerInstance, UI
 	INT BaseVertexLocation, UINT StartInstanceLocation)
 {
 	FlushResourceBarriers();
-	//m_DynamicViewDescriptorHeap.CommitGraphicsRootDescriptorTables(m_CommandList);
-	//m_DynamicSamplerDescriptorHeap.CommitGraphicsRootDescriptorTables(m_CommandList);
+	m_DynamicViewDescriptorHeap.CommitGraphicsRootDescriptorTables(m_CommandList);
+	m_DynamicSamplerDescriptorHeap.CommitGraphicsRootDescriptorTables(m_CommandList);
 	m_CommandList->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
 }
 inline void GraphicsContext::SetVertexBuffer(UINT Slot, const D3D12_VERTEX_BUFFER_VIEW& VBView)

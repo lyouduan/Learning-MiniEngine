@@ -21,7 +21,7 @@ using namespace Utility;
 
 namespace Utility
 {
-    ByteArray NullFile = std::make_shared<vector<std::byte> > (vector<std::byte>() );
+    ByteArray NullFile = std::make_shared<std::vector<std::byte> > (std::vector<std::byte>() );
 }
 
 //ByteArray DecompressZippedFile( wstring& fileName );
@@ -33,11 +33,11 @@ ByteArray ReadFileHelper(const wstring& fileName)
     if (fileExists == -1)
         return NullFile;
 
-    ifstream file(fileName, ios::in | ios::binary );
+    ifstream file( fileName, ios::in | ios::binary );
     if (!file)
         return NullFile;
 
-    Utility::ByteArray byteArray = std::make_shared<vector<std::byte> >( fileStat.st_size );
+    Utility::ByteArray byteArray = make_shared<vector<std::byte> >( fileStat.st_size );
     file.read( (char*)byteArray->data(), byteArray->size() );
     file.close();
 
@@ -125,13 +125,13 @@ ByteArray DecompressZippedFile( wstring& fileName )
 }
 */
 
-ByteArray Utility::ReadFileSync( const wstring& fileName)
+ByteArray Utility::ReadFileSync( const std::wstring& fileName)
 {
-    return ReadFileHelperEx(make_shared<wstring>(fileName));
+    return ReadFileHelperEx(std::make_shared<std::wstring>(fileName));
 }
 
-task<ByteArray> Utility::ReadFileAsync(const wstring& fileName)
+task<ByteArray> Utility::ReadFileAsync(const std::wstring& fileName)
 {
-    shared_ptr<wstring> SharedPtr = make_shared<wstring>(fileName);
+    shared_ptr<wstring> SharedPtr = std::make_shared<std::wstring>(fileName);
     return create_task( [=] { return ReadFileHelperEx(SharedPtr); } );
 }

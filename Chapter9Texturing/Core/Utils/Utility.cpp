@@ -243,3 +243,9 @@ std::wstring Utility::RemoveExtension(const std::wstring& filePath)
 {
     return filePath.substr(0, filePath.rfind(L"."));
 }
+
+std::wstring MakeWStr(const std::string& str)
+{
+    return std::wstring(str.begin(), str.end());
+}
+

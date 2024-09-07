@@ -38,7 +38,7 @@ class ManagedTexture : public Texture
     friend class TextureRef;
 
 public:
-    ManagedTexture(const wstring& FileName);
+    ManagedTexture( const wstring& FileName );
 
     void WaitForLoad(void) const;
     void CreateFromMemory(ByteArray memory, eDefaultTexture fallback, bool sRGB);
@@ -59,19 +59,19 @@ namespace TextureManager
     wstring s_RootPath = L"";
     map<wstring, std::unique_ptr<ManagedTexture>> s_TextureCache;
 
-    void Initialize(const wstring& TextureLibRoot)
+    void Initialize( const wstring& TextureLibRoot )
     {
         s_RootPath = TextureLibRoot;
     }
 
-    void Shutdown(void)
+    void Shutdown( void )
     {
         s_TextureCache.clear();
     }
 
     mutex s_Mutex;
 
-    ManagedTexture* FindOrLoadTexture(const wstring& fileName, eDefaultTexture fallback, bool forceSRGB)
+    ManagedTexture* FindOrLoadTexture( const wstring& fileName, eDefaultTexture fallback, bool forceSRGB )
     {
         ManagedTexture* tex = nullptr;
 
@@ -100,8 +100,7 @@ namespace TextureManager
             }
         }
 
-        //Utility::ByteArray ba = Utility::ReadFileSync(s_RootPath + fileName);
-        Utility::ByteArray ba = Utility::ReadFileSync(fileName);
+        Utility::ByteArray ba = Utility::ReadFileSync( s_RootPath + fileName );
         tex->CreateFromMemory(ba, fallback, forceSRGB);
 
         // This was the first time it was requested, so indicate that the caller must read the file
@@ -119,7 +118,7 @@ namespace TextureManager
 
 } // namespace TextureManager
 
-ManagedTexture::ManagedTexture(const wstring& FileName)
+ManagedTexture::ManagedTexture( const wstring& FileName )
     : m_MapKey(FileName), m_IsValid(false), m_IsLoading(true), m_ReferenceCount(0)
 {
     m_hCpuDescriptorHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
@@ -136,8 +135,8 @@ void ManagedTexture::CreateFromMemory(ByteArray ba, eDefaultTexture fallback, bo
         // We probably have a texture to load, so let's allocate a new descriptor
         m_hCpuDescriptorHandle = AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-        if (SUCCEEDED(CreateDDSTextureFromMemory(g_Device, (const uint8_t*)ba->data(), ba->size(),
-            0, forceSRGB, m_pResource.GetAddressOf(), m_hCpuDescriptorHandle)))
+        if ( SUCCEEDED( CreateDDSTextureFromMemory( g_Device, (const uint8_t*)ba->data(), ba->size(),
+            0, forceSRGB, m_pResource.GetAddressOf(), m_hCpuDescriptorHandle) ) )
         {
             m_UsageState = D3D12_RESOURCE_STATE_GENERIC_READ;
             m_IsValid = true;
@@ -156,7 +155,7 @@ void ManagedTexture::CreateFromMemory(ByteArray ba, eDefaultTexture fallback, bo
     m_IsLoading = false;
 }
 
-void ManagedTexture::WaitForLoad(void) const
+void ManagedTexture::WaitForLoad( void ) const
 {
     while ((volatile bool&)m_IsLoading)
         this_thread::yield();
@@ -167,13 +166,13 @@ void ManagedTexture::Unload()
     TextureManager::DestroyTexture(m_MapKey);
 }
 
-TextureRef::TextureRef(const TextureRef& ref) : m_ref(ref.m_ref)
+TextureRef::TextureRef( const TextureRef& ref ) : m_ref(ref.m_ref)
 {
     if (m_ref != nullptr)
         ++m_ref->m_ReferenceCount;
 }
 
-TextureRef::TextureRef(ManagedTexture* tex) : m_ref(tex)
+TextureRef::TextureRef( ManagedTexture* tex ) : m_ref(tex)
 {
     if (m_ref != nullptr)
         ++m_ref->m_ReferenceCount;
@@ -209,12 +208,12 @@ bool TextureRef::IsValid() const
     return m_ref && m_ref->IsValid();
 }
 
-const Texture* TextureRef::Get(void) const
+const Texture* TextureRef::Get( void ) const
 {
     return m_ref;
 }
 
-const Texture* TextureRef::operator->(void) const
+const Texture* TextureRef::operator->( void ) const
 {
     ASSERT(m_ref != nullptr);
     return m_ref;
@@ -229,12 +228,12 @@ D3D12_CPU_DESCRIPTOR_HANDLE TextureRef::GetSRV() const
 }
 
 
-TextureRef TextureManager::LoadDDSFromFile(const wstring& filePath, eDefaultTexture fallback, bool forceSRGB)
+TextureRef TextureManager::LoadDDSFromFile( const wstring& filePath, eDefaultTexture fallback, bool forceSRGB )
 {
     return FindOrLoadTexture(filePath, fallback, forceSRGB);
 }
 
-TextureRef TextureManager::LoadDDSFromFile(const string& filePath, eDefaultTexture fallback, bool forceSRGB)
+TextureRef TextureManager::LoadDDSFromFile( const string& filePath, eDefaultTexture fallback, bool forceSRGB )
 {
     return LoadDDSFromFile(Utility::UTF8ToWideString(filePath), fallback, forceSRGB);
 }

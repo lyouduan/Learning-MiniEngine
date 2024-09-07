@@ -61,6 +61,7 @@ __declspec(align(16)) struct Light
 __declspec(align(16)) struct ObjConstants
 {
 	DirectX::XMFLOAT4X4 World;
+	DirectX::XMFLOAT4X4 TexTransform;
 };
 
 #define MaxLights 16
