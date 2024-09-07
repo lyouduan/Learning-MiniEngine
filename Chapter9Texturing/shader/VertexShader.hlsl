@@ -8,7 +8,8 @@ VertexOut main(VertexIn input)
     output.positionW = posW.xyz;
     output.positionH = mul(posW, passConstants.gViewProj);
     output.normal = input.normal;
-    output.tex = mul(float4(input.tex, 0.0, 1.0), objConstants.gTexTransform).xy;
+    float4 tex = mul(float4(input.tex, 0.0, 1.0), objConstants.gTexTransform);
+    output.tex = mul(tex, matConstants.gMatTransform).xy;
     
     return output;
 }

@@ -30,6 +30,7 @@ struct PassConstants
 
 struct MaterialConstants
 {
+    float4x4 gMatTransform;
     float4 gDiffuseAlbedo;
     float3 gFresnelR0;
     float gRoughness;
@@ -37,7 +38,7 @@ struct MaterialConstants
 
 ConstantBuffer<ObjConstants> objConstants : register(b0);
 ConstantBuffer<PassConstants> passConstants : register(b1);
-ConstantBuffer<MaterialConstants> materialConstants : register(b2);
+ConstantBuffer<MaterialConstants> matConstants : register(b2);
 
 struct VertexIn
 {

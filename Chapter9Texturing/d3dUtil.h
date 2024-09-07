@@ -12,6 +12,8 @@ struct Material
 	DirectX::XMFLOAT4 DiffuseAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f };
 	DirectX::XMFLOAT3 FresnelR0 = { 1.0f, 1.0f, 1.0f };
 	float Roughness = 0.25f; // align with float3
+
+	DirectX::XMMATRIX MatTransform = DirectX::XMMatrixIdentity();
 };
 
 struct Vertex {
@@ -43,9 +45,12 @@ struct MeshGeometry
 
 __declspec(align(16)) struct MaterialConstants
 {
+	DirectX::XMFLOAT4X4 MatTransform;
 	DirectX::XMFLOAT4 DiffuseAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f };
 	DirectX::XMFLOAT3 FresnelR0 = { 1.0f, 1.0f, 1.0f };
 	float Roughness = 0.25f; 
+
+
 };
 
 __declspec(align(16)) struct Light

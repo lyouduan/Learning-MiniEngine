@@ -14,9 +14,8 @@
 struct RenderItem
 {
 	RenderItem() = default;
-	DirectX::XMMATRIX World;
-	DirectX::XMMATRIX TexTransform;
-	DirectX::XMMATRIX MatTransform;
+	DirectX::XMMATRIX World = XMMatrixIdentity();
+	DirectX::XMMATRIX TexTransform = XMMatrixIdentity();
 
 	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 

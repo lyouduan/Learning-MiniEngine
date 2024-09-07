@@ -225,6 +225,7 @@ void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<std::uniq
 		XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(iter->TexTransform)); // hlsl 列主序矩阵
 		gfxContext.SetDynamicConstantBufferView(0, sizeof(objConstants), &objConstants);
 
+		XMStoreFloat4x4(&matCB.MatTransform, XMMatrixTranspose(iter->Mat->MatTransform));
 		matCB.DiffuseAlbedo = iter->Mat->DiffuseAlbedo;
 		matCB.FresnelR0 = iter->Mat->FresnelR0;
 		matCB.Roughness = iter->Mat->Roughness;
@@ -353,7 +354,7 @@ void GameApp::BuildLandRenderItems()
 
 	auto wave = std::make_unique<RenderItem>();
 	wave->World = XMMatrixIdentity() * XMMatrixScaling(0.6, 0.5, 0.6) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
-	wave->TexTransform = XMMatrixScaling(5.0f, 5.0f, 1.0f);
+	wave->TexTransform = XMMatrixScaling(4.0f, 4.0f, 1.0f);
 	wave->Geo = m_Geometry["waveGeo"].get();
 	wave->Mat = m_Materials["water"].get();
 	wave->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -361,6 +362,7 @@ void GameApp::BuildLandRenderItems()
 	wave->BaseVertexLocation = wave->Geo->DrawArgs["wave"].BaseVertexLocation;
 	wave->StartIndexLocation = wave->Geo->DrawArgs["wave"].StartIndexLocation;
 	wave->srv = m_Textures["water"].GetSRV();
+	m_WavesRitem = wave.get();
 
 	m_LandRenders.push_back(std::move(wave));
 }
@@ -559,48 +561,6 @@ XMFLOAT3 GameApp::GetHillsNormal(float x, float z) const
 	return n;
 }
 
-void GameApp::UpdateWaves(float deltaT)
-{
-	// Every quarter second, generate a random wave.
-	static float t_base = 0.0f;
-
-	t_base += deltaT;
-
-	if (t_base  >= 0.25f)
-	{
-		t_base -= 0.25f;
-
-		int i = Utility::Rand(4, mWaves->RowCount() - 5);
-		int j = Utility::Rand(4, mWaves->ColumnCount() - 5);
-
-		float r = Utility::RandF(0.2f, 0.5f);
-
-		mWaves->Disturb(i, j, r);
-	}
-	
-
-	// Update the wave simulation.
-	mWaves->Update(deltaT);
-
-	// Update the wave vertex buffer with the new solution.
-	m_VerticesWaves.clear();
-	for (int i = 0; i < mWaves->VertexCount(); ++i)
-	{
-		Vertex v;
-
-		v.position = mWaves->Position(i);
-		v.normal = mWaves->Normal(i);
-
-		v.tex.x = 0.5f + v.position.x / mWaves->Width();
-		v.tex.y = 0.5f - v.position.y / mWaves->Depth();
-
-		m_VerticesWaves.push_back(v);
-	}
-	AnimateMaterials(deltaT);
-
-	m_Geometry["waveGeo"]->m_VertexBuffer.Create(L"vertex buffer", m_VerticesWaves.size(), sizeof(Vertex), m_VerticesWaves.data());
-}
-
 void GameApp::BuildMaterials()
 {
 	auto grass = std::make_unique<Material>();
@@ -685,8 +645,59 @@ void GameApp::LoadTextures()
 	
 }
 
+void GameApp::UpdateWaves(float deltaT)
+{
+	// Every quarter second, generate a random wave.
+	static float t_base = 0.0f;
+
+	t_base += deltaT;
+
+	if (t_base >= 0.25f)
+	{
+		t_base -= 0.25f;
+
+		int i = Utility::Rand(4, mWaves->RowCount() - 5);
+		int j = Utility::Rand(4, mWaves->ColumnCount() - 5);
+
+		float r = Utility::RandF(0.2f, 0.5f);
+
+		mWaves->Disturb(i, j, r);
+	}
+
+
+	// Update the wave simulation.
+	mWaves->Update(deltaT);
+
+	// Update the wave vertex buffer with the new solution.
+	m_VerticesWaves.clear();
+	for (int i = 0; i < mWaves->VertexCount(); ++i)
+	{
+		Vertex v;
+
+		v.position = mWaves->Position(i);
+		v.normal = mWaves->Normal(i);
+
+		v.tex.x = 0.5f + v.position.x / mWaves->Width();
+		v.tex.y = 0.5f - v.position.z / mWaves->Depth();
+
+		m_VerticesWaves.push_back(v);
+	}
+	AnimateMaterials(deltaT);
+
+	m_Geometry["waveGeo"]->m_VertexBuffer.Create(L"vertex buffer", m_VerticesWaves.size(), sizeof(Vertex), m_VerticesWaves.data());
+}
+
 void GameApp::AnimateMaterials(float deltaT)
 {
+	auto water = m_Materials["water"].get();
+	XMFLOAT4X4 matTrans;
+	XMStoreFloat4x4(&matTrans, m_WavesRitem->Mat->MatTransform);
+	float& tu = matTrans(3, 0);
+	float& tv = matTrans(3, 1);
+
+	tu += 0.01f * deltaT;
+	tv += 0.002f * deltaT;
 	
+	m_WavesRitem->Mat->MatTransform = XMLoadFloat4x4(&matTrans);
 }
 
