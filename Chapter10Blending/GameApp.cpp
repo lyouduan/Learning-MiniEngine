@@ -82,16 +82,26 @@ void GameApp::Startup(void)
 	D3DReadFileToBlob(L"shader/PixelShader.cso", &pixelBlob);
 
 	// PSO
-	m_PSO.SetRootSignature(m_RootSignature);
-	m_PSO.SetRasterizerState(RasterizerDefault);
-	m_PSO.SetBlendState(BlendDisable);
-	m_PSO.SetDepthStencilState(DepthStateReadWrite);
-	m_PSO.SetInputLayout(_countof(mInputLayout), mInputLayout);
-	m_PSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-	m_PSO.SetRenderTargetFormat(ColorFormat, DepthFormat);
-	m_PSO.SetVertexShader(vertexBlob);
-	m_PSO.SetPixelShader(pixelBlob);
-	m_PSO.Finalize();
+	GraphicsPSO opaquePSO;
+	opaquePSO.SetRootSignature(m_RootSignature);
+	opaquePSO.SetRasterizerState(RasterizerDefault);
+	opaquePSO.SetBlendState(BlendDisable);
+	opaquePSO.SetDepthStencilState(DepthStateReadWrite);
+	opaquePSO.SetInputLayout(_countof(mInputLayout), mInputLayout);
+	opaquePSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	opaquePSO.SetRenderTargetFormat(ColorFormat, DepthFormat);
+	opaquePSO.SetVertexShader(vertexBlob);
+	opaquePSO.SetPixelShader(pixelBlob);
+	opaquePSO.Finalize();
+	m_PSOs["opaque"] = opaquePSO;
+
+	GraphicsPSO transpacrentPSO = opaquePSO;
+	auto blend = Graphics::BlendTraditional;
+	blend.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+	transpacrentPSO.SetBlendState(blend);
+	transpacrentPSO.Finalize();
+	m_PSOs["transparent"] = transpacrentPSO;
+
 }
 
 void GameApp::Cleanup(void)
@@ -101,12 +111,15 @@ void GameApp::Cleanup(void)
 		iter->Geo->m_VertexBuffer.Destroy();
 		iter->Geo->m_IndexBuffer.Destroy();
 	}
-
-	for (auto& iter : m_LandRenders)
+	for (int i = 0; (int)RenderLayer::Count; ++i)
 	{
-		iter->Geo->m_VertexBuffer.Destroy();
-		iter->Geo->m_IndexBuffer.Destroy();
+		for (auto& iter : m_LandRenders[i])
+		{
+			iter->Geo->m_VertexBuffer.Destroy();
+			iter->Geo->m_IndexBuffer.Destroy();
+		}
 	}
+	
 }
 
 void GameApp::Update(float deltaT)
@@ -166,12 +179,17 @@ void GameApp::Update(float deltaT)
 		1.0f * sinf(mSunTheta) * sinf(mSunTheta),
 		1.0f);
 	XMStoreFloat3(&passConstant.Lights[0].Direction, lightDir);
-	passConstant.Lights[0].Strength = { 1.0f, 1.0f, 0.9f };
+	passConstant.Lights[0].Strength = { 0.9f, 0.9f, 0.9f };
 	passConstant.Lights[0].FalloffEnd = 100.0;
 	passConstant.Lights[0].Position = { 0.0f, 10.0f, -10.0f };
 	passConstant.ambientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
 	XMStoreFloat3(&passConstant.eyePosW, eyePosition);
 
+	passConstant.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
+	passConstant.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
+
+	passConstant.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
+	passConstant.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
 	// update waves
 	UpdateWaves(deltaT);
 }
@@ -195,7 +213,7 @@ void GameApp::RenderScene(void)
 	gfxContext.SetRenderTarget(g_DisplayPlane[g_CurrentBuffer].GetRTV(), g_SceneDepthBuffer.GetDSV());
 
 	//set root signature
-	gfxContext.SetPipelineState(m_PSO);
+	gfxContext.SetPipelineState(m_PSOs["opaque"]);
 
 	gfxContext.SetRootSignature(m_RootSignature);
 
@@ -205,7 +223,13 @@ void GameApp::RenderScene(void)
 	if (m_bRenderShapes)
 		DrawRenderItems(gfxContext, m_ShapeRenders);
 	else
-		DrawRenderItems(gfxContext, m_LandRenders);
+	{
+		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::Opaque]);
+
+		gfxContext.SetPipelineState(m_PSOs["transparent"]);
+		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::Transparent]);
+	}
+		
 	
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 
@@ -292,7 +316,7 @@ void GameApp::BuildShapeRenderItems()
 
 		leftCylRitem->World = leftCylWorld;
 		leftCylRitem->TexTransform = brickTexTransform;
-		leftCylRitem->Mat = m_Materials["bricks0"].get();
+		leftCylRitem->Mat = m_Materials["stone0"].get();
 		leftCylRitem->Geo = m_Geometry["shapeGeo"].get();
 		leftCylRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		leftCylRitem->IndexCount = leftCylRitem->Geo->DrawArgs["cylinder"].IndexCount;
@@ -302,7 +326,7 @@ void GameApp::BuildShapeRenderItems()
 
 		rightCylRitem->World = rightCylWorld;
 		rightCylRitem->TexTransform = brickTexTransform;
-		rightCylRitem->Mat = m_Materials["bricks0"].get();
+		rightCylRitem->Mat = m_Materials["stone0"].get();
 		rightCylRitem->Geo = m_Geometry["shapeGeo"].get();
 		rightCylRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		rightCylRitem->IndexCount = rightCylRitem->Geo->DrawArgs["cylinder"].IndexCount;
@@ -351,10 +375,10 @@ void GameApp::BuildLandRenderItems()
 	land->StartIndexLocation = land->Geo->DrawArgs["land"].StartIndexLocation;
 	land->srv = m_Textures["grass"].GetSRV();
 
-	m_LandRenders.push_back(std::move(land));
+	m_LandRenders[(int)RenderLayer::Opaque].push_back(std::move(land));
 
 	auto wave = std::make_unique<RenderItem>();
-	wave->World = XMMatrixIdentity() * XMMatrixScaling(0.6, 0.5, 0.6) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
+	wave->World = XMMatrixIdentity() * XMMatrixScaling(0.6, 0.6, 0.6) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
 	wave->TexTransform = XMMatrixScaling(4.0f, 4.0f, 1.0f);
 	wave->Geo = m_Geometry["waveGeo"].get();
 	wave->Mat = m_Materials["water"].get();
@@ -365,7 +389,8 @@ void GameApp::BuildLandRenderItems()
 	wave->srv = m_Textures["water"].GetSRV();
 	m_WavesRitem = wave.get();
 
-	m_LandRenders.push_back(std::move(wave));
+	m_LandRenders[(int)RenderLayer::Transparent].push_back(std::move(wave));
+	//m_LandRenders.push_back(std::move(wave));
 
 	auto box = std::make_unique<RenderItem>();
 	box->World = XMMatrixIdentity() * XMMatrixTranslation(.0f, -12.0f, -30.f);
@@ -377,7 +402,8 @@ void GameApp::BuildLandRenderItems()
 	box->StartIndexLocation = box->Geo->DrawArgs["sbox"].StartIndexLocation;
 	box->srv = m_Textures["wood"].GetSRV();
 
-	m_LandRenders.push_back(std::move(box));
+	m_LandRenders[(int)RenderLayer::AlphaTested].push_back(std::move(box));
+	//m_LandRenders.push_back(std::move(box));
 }
 
 void GameApp::BuildLandGeometry()
@@ -617,9 +643,9 @@ void GameApp::BuildMaterials()
 	// tools we need (transparency, environment reflection), so we fake it for now.
 	auto water = std::make_unique<Material>();
 	water->Name = "water";
-	water->DiffuseAlbedo = XMFLOAT4(1.0, 1.0, 1.0, 1.0f);
-	water->FresnelR0 = XMFLOAT3(0.5f, 0.5f, 0.8f);
-	water->Roughness = 0.3f;
+	water->DiffuseAlbedo = XMFLOAT4(1.0, 1.0, 1.0, 0.5f);
+	water->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
+	water->Roughness = 0.0f;
 
 	auto bricks0 = std::make_unique<Material>();
 	bricks0->Name = "bricks0";

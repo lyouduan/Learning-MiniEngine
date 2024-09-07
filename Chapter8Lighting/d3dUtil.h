@@ -67,6 +67,6 @@ __declspec(align(16)) struct PassConstants
 {
 	DirectX::XMFLOAT4X4 ViewProj;
 	DirectX::XMFLOAT3 eyePosW = {0.0, 0.0, 0.0};
-	DirectX::XMFLOAT4 ambientLight = { 0.0f, 0.0f, 0.0f, 1.0f };
+	DirectX::XMFLOAT4 ambientLight = { 0.1f, 0.1f, 0.1f, 1.0f };
 	Light Lights[MaxLights];
 };

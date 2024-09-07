@@ -38,7 +38,7 @@ namespace TextureManager
 
     // Load a texture from a DDS file.  Never returns null references, but if a 
     // texture cannot be found, ref->IsValid() will return false.
-    TextureRef LoadDDSFromFile( const std::wstring& filePath, eDefaultTexture fallback = kMagenta2D, bool sRGB = false );
+    TextureRef LoadDDSFromFile( const std::wstring& filePath, bool sRGB = false, eDefaultTexture fallback = kMagenta2D);
     TextureRef LoadDDSFromFile( const std::string& filePath, eDefaultTexture fallback = kMagenta2D, bool sRGB = false );
 }
 

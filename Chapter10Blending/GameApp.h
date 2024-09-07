@@ -10,6 +10,14 @@
 #include <memory>
 #include "TextureManager.h"
 
+enum class RenderLayer : int
+{
+	Opaque = 0,
+	AlphaTested,
+	Transparent,
+	Count
+};
+
 // render item
 struct RenderItem
 {
@@ -63,7 +71,8 @@ private:
 	void BuildMaterials();
 	void LoadTextures();
 	RootSignature m_RootSignature;
-	GraphicsPSO m_PSO;
+
+	std::unordered_map<std::string, GraphicsPSO> m_PSOs;
 
 	// switch render scene
 	bool m_bRenderShapes = true;
@@ -75,7 +84,8 @@ private:
 
 	// List of all the render items.
 	std::vector < std::unique_ptr<RenderItem>> m_ShapeRenders;
-	std::vector < std::unique_ptr<RenderItem>> m_LandRenders;
+	//std::vector < std::unique_ptr<RenderItem>> m_LandRenders;
+	std::vector<std::unique_ptr<RenderItem>> m_LandRenders[(int)RenderLayer::Count];
 
 	// materials
 	std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;

@@ -168,7 +168,7 @@ void GameApp::Update(float deltaT)
 	passConstant.Lights[0].Strength = { 1.0f, 1.0f, 0.9f };
 	passConstant.Lights[0].FalloffEnd = 100.0;
 	passConstant.Lights[0].Position = { 0.0f, 10.0f, -10.0f };
-	passConstant.ambientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
+	passConstant.ambientLight = { 0.1f, 0.1f, 0.1f, 1.0f };
 	XMStoreFloat3(&passConstant.eyePosW, eyePosition);
 
 	// update waves
@@ -291,7 +291,7 @@ void GameApp::BuildShapeRenderItems()
 
 		leftCylRitem->World = leftCylWorld;
 		leftCylRitem->TexTransform = brickTexTransform;
-		leftCylRitem->Mat = m_Materials["bricks0"].get();
+		leftCylRitem->Mat = m_Materials["stone0"].get();
 		leftCylRitem->Geo = m_Geometry["shapeGeo"].get();
 		leftCylRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		leftCylRitem->IndexCount = leftCylRitem->Geo->DrawArgs["cylinder"].IndexCount;
@@ -301,7 +301,7 @@ void GameApp::BuildShapeRenderItems()
 
 		rightCylRitem->World = rightCylWorld;
 		rightCylRitem->TexTransform = brickTexTransform;
-		rightCylRitem->Mat = m_Materials["bricks0"].get();
+		rightCylRitem->Mat = m_Materials["stone0"].get();
 		rightCylRitem->Geo = m_Geometry["shapeGeo"].get();
 		rightCylRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		rightCylRitem->IndexCount = rightCylRitem->Geo->DrawArgs["cylinder"].IndexCount;
@@ -566,7 +566,7 @@ void GameApp::BuildMaterials()
 	auto grass = std::make_unique<Material>();
 	grass->Name = "grass";
 	grass->DiffuseAlbedo = XMFLOAT4(1.0, 1.0, 1.0, 1.0f);
-	grass->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
+	grass->FresnelR0 = XMFLOAT3(0.8f, 0.8f, 0.8f);
 	grass->Roughness = 0.8f;
 
 	// This is not a good water material definition, but we do not have all the rendering

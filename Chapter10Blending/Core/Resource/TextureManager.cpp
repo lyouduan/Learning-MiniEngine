@@ -228,12 +228,12 @@ D3D12_CPU_DESCRIPTOR_HANDLE TextureRef::GetSRV() const
 }
 
 
-TextureRef TextureManager::LoadDDSFromFile( const wstring& filePath, eDefaultTexture fallback, bool forceSRGB )
+TextureRef TextureManager::LoadDDSFromFile( const wstring& filePath, bool forceSRGB, eDefaultTexture fallback)
 {
     return FindOrLoadTexture(filePath, fallback, forceSRGB);
 }
 
 TextureRef TextureManager::LoadDDSFromFile( const string& filePath, eDefaultTexture fallback, bool forceSRGB )
 {
-    return LoadDDSFromFile(Utility::UTF8ToWideString(filePath), fallback, forceSRGB);
+    return LoadDDSFromFile(Utility::UTF8ToWideString(filePath), forceSRGB, fallback);
 }
