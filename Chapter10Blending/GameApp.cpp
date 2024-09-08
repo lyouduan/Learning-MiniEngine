@@ -213,7 +213,8 @@ void GameApp::RenderScene(void)
 	// clear dsv
 	gfxContext.ClearDepthAndStencil(g_SceneDepthBuffer);
 	// clear rtv
-	g_DisplayPlane[g_CurrentBuffer].SetClearColor(Color{ 0.2f, 0.4f, 0.6f, 1.0f });
+	g_DisplayPlane[g_CurrentBuffer].SetClearColor(Color(passConstant.fogColor.x, passConstant.fogColor.y, passConstant.fogColor.z, passConstant.fogColor.w));
+
 	gfxContext.ClearColor(g_DisplayPlane[g_CurrentBuffer]);
 
 	// set render target
@@ -231,6 +232,7 @@ void GameApp::RenderScene(void)
 		DrawRenderItems(gfxContext, m_ShapeRenders);
 	else
 	{
+		gfxContext.SetPipelineState(m_PSOs["opaque"]);
 		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::Opaque]);
 
 		gfxContext.SetPipelineState(m_PSOs["transparent"]);

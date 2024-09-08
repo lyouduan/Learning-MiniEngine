@@ -24,8 +24,14 @@ struct PassConstants
 {
     float4x4 gViewProj;
     float3 gEyePosW;
+    float pad0;
     float4 gAmbientLight;
     Light Lights[MaxLights];
+    float4 gFogColor;
+    float gFogStart;
+    float gFogRange;
+    float pad1;
+    float pad2;
 };
 
 struct MaterialConstants

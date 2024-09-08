@@ -74,6 +74,12 @@ __declspec(align(16)) struct PassConstants
 {
 	DirectX::XMFLOAT4X4 ViewProj;
 	DirectX::XMFLOAT3 eyePosW = {0.0, 0.0, 0.0};
+	float pad0 = 0.0;
 	DirectX::XMFLOAT4 ambientLight = { 0.0f, 0.0f, 0.0f, 1.0f };
 	Light Lights[MaxLights];
+	DirectX::XMFLOAT4 fogColor = { 0.7f, 0.7f, 0.7f, 1.0f };
+	float fogStart = 5.0f;
+	float fogRange = 100.0;
+	float pad1;
+	float pad2;
 };
