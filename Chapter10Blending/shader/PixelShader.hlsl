@@ -30,8 +30,8 @@ float4 main(VertexOut input) : SV_TARGET
     float4 litColor = ambient + directLight;
     
     // fog
-    float fogAmount = saturate((distance - passConstants.gFogStart) / passConstants.gFogRange);
-    litColor = lerp(litColor, passConstants.gFogColor, fogAmount);
+    //float fogAmount = saturate((distance - passConstants.gFogStart) / passConstants.gFogRange);
+    //litColor = lerp(litColor, passConstants.gFogColor, fogAmount);
     
     litColor.a = diffuseAlbedo.a;
     

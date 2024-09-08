@@ -62,6 +62,7 @@ private:
 	void BuildWavesGeometry();
 	void BuildShapeGeometry();
 	void BuildBoxGeometry();
+	void BuildSkullGeometry();
 
 	float GetHillsHeight(float x, float z)const;
 	DirectX::XMFLOAT3 GetHillsNormal(float x, float z)const;

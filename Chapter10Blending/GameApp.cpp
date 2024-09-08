@@ -10,7 +10,7 @@
 #include "GeometryGenerator.h"
 #include "TextureManager.h"
 #include "DescriptorHeap.h"
-
+#include <fstream>
 #include <d3dcompiler.h>
 
 using namespace Graphics;
@@ -48,6 +48,7 @@ void GameApp::Startup(void)
 	BuildWavesGeometry();
 	BuildShapeGeometry();
 	BuildBoxGeometry();
+	BuildSkullGeometry();
 
 	// build render items
 	BuildLandRenderItems();
@@ -302,15 +303,16 @@ void GameApp::BuildShapeRenderItems()
 	gridRitem->srv = m_Textures["tile"].GetSRV();
 	m_ShapeRenders.push_back(std::move(gridRitem));
 
-	//auto skullRitem = std::make_unique<RenderItem>();
-	//skullRitem->World = XMMatrixIdentity() * XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f);
-	//skullRitem->Mat = m_Materials["skullMat"].get();
-	//skullRitem->Geo = m_Geometry["skullGeo"].get();
-	//skullRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	//skullRitem->IndexCount = skullRitem->Geo->DrawArgs["skull"].IndexCount;
-	//skullRitem->StartIndexLocation = skullRitem->Geo->DrawArgs["skull"].StartIndexLocation;
-	//skullRitem->BaseVertexLocation = skullRitem->Geo->DrawArgs["skull"].BaseVertexLocation;
-	//m_AllRenders.push_back(std::move(skullRitem));
+	auto skullRitem = std::make_unique<RenderItem>();
+	skullRitem->World = XMMatrixIdentity() * XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f);
+	skullRitem->Mat = m_Materials["skullMat"].get();
+	skullRitem->Geo = m_Geometry["skullGeo"].get();
+	skullRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	skullRitem->IndexCount = skullRitem->Geo->DrawArgs["skull"].IndexCount;
+	skullRitem->StartIndexLocation = skullRitem->Geo->DrawArgs["skull"].StartIndexLocation;
+	skullRitem->BaseVertexLocation = skullRitem->Geo->DrawArgs["skull"].BaseVertexLocation;
+	skullRitem->srv = m_Textures["white1x1"].GetSRV();
+	m_ShapeRenders.push_back(std::move(skullRitem));
 
 	XMMATRIX brickTexTransform = XMMatrixScaling(1.0f, 1.0f, 1.0f);
 	for (int i = 0; i < 5; ++i)
@@ -624,6 +626,62 @@ void GameApp::BuildBoxGeometry()
 	m_Geometry["boxGeo"] = std::move(geo);
 }
 
+void GameApp::BuildSkullGeometry()
+{
+	std::ifstream fin("Models/skull.txt");
+
+	if (!fin)
+	{
+		MessageBox(0, L"Models/skull.txt not found.", 0, 0);
+		return;
+	}
+
+	UINT vcount = 0;
+	UINT tcount = 0;
+	std::string ignore;
+
+	fin >> ignore >> vcount;
+	fin >> ignore >> tcount;
+	fin >> ignore >> ignore >> ignore >> ignore;
+
+	std::vector<Vertex> vertices(vcount);
+	for (UINT i = 0; i < vcount; ++i)
+	{
+		fin >> vertices[i].position.x >> vertices[i].position.y >> vertices[i].position.z;
+		fin >> vertices[i].normal.x >> vertices[i].normal.y >> vertices[i].normal.z;
+
+		// Model does not have texture coordinates, so just zero them out.
+		vertices[i].tex = { 0.0f, 0.0f };
+	}
+
+	fin >> ignore;
+	fin >> ignore;
+	fin >> ignore;
+
+	std::vector<std::int32_t> indices(3 * tcount);
+	for (UINT i = 0; i < tcount; ++i)
+	{
+		fin >> indices[i * 3 + 0] >> indices[i * 3 + 1] >> indices[i * 3 + 2];
+	}
+
+	fin.close();
+
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->name = "skullGeo";
+	geo->m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), sizeof(Vertex), vertices.data());
+	geo->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), sizeof(std::int32_t), indices.data());
+
+	SubmeshGeometry submesh;
+	submesh.IndexCount = (UINT)indices.size();
+	submesh.StartIndexLocation = 0;
+	submesh.BaseVertexLocation = 0;
+
+	geo->DrawArgs["skull"] = std::move(submesh);
+
+	m_Geometry["skullGeo"] = std::move(geo);
+
+}
+
 float GameApp::GetHillsHeight(float x, float z) const
 {
 	return 0.3f * (z * sinf(0.1f * x) + x * cosf(0.1f * z));
@@ -737,6 +795,10 @@ void GameApp::LoadTextures()
 	TextureRef WireFenceTex = TextureManager::LoadDDSFromFile(L"WireFence.dds");
 	if (WireFenceTex.IsValid())
 		m_Textures["wireFence"] = WireFenceTex;
+
+	TextureRef white1x1Tex = TextureManager::LoadDDSFromFile(L"white1x1.dds");
+	if (white1x1Tex.IsValid())
+		m_Textures["white1x1"] = white1x1Tex;
 
 	Utility::Printf("Found %u textures\n", m_Textures.size());
 	
