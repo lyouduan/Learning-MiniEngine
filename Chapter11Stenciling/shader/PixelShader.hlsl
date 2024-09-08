@@ -8,8 +8,8 @@ SamplerState gsamLinearClamp : register(s0);
 float4 main(VertexOut input) : SV_TARGET
 {
     float4 diffuseAlbedo = gDiffuseMap.Sample(gsamLinearClamp, input.tex) * matConstants.gDiffuseAlbedo;
-// alpha tested
-    clip(diffuseAlbedo.a - 0.1f);
+    // alpha tested
+    //clip(diffuseAlbedo.a - 0.1f);
     
     input.normal = normalize(input.normal);
     

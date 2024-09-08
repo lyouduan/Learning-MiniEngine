@@ -69,7 +69,8 @@ void GameApp::Startup(void)
 	};
 
 	DXGI_FORMAT ColorFormat = g_DisplayPlane[g_CurrentBuffer].GetFormat();
-	DXGI_FORMAT DepthFormat = g_SceneDepthBuffer.GetFormat();
+	// need to modify the format DXGI_FORMAT_D32_FLOAT by DXGI_FORMAT_D24_UNORM_S8_UINT
+	DXGI_FORMAT DepthFormat = g_SceneDepthBuffer.GetFormat(); 
 
 	// shader 
 	ComPtr<ID3DBlob> vertexBlob;
@@ -77,41 +78,87 @@ void GameApp::Startup(void)
 	D3DReadFileToBlob(L"shader/VertexShader.cso", &vertexBlob);
 	D3DReadFileToBlob(L"shader/PixelShader.cso", &pixelBlob);
 
-	// PSO
+	// opaque PSO
 	GraphicsPSO opaquePSO;
-	opaquePSO.SetRootSignature(m_RootSignature);
-	opaquePSO.SetRasterizerState(RasterizerDefault);
-	opaquePSO.SetBlendState(BlendDisable);
-	opaquePSO.SetDepthStencilState(DepthStateReadWrite);
-	opaquePSO.SetInputLayout(_countof(mInputLayout), mInputLayout);
-	opaquePSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-	opaquePSO.SetRenderTargetFormat(ColorFormat, DepthFormat);
-	opaquePSO.SetVertexShader(vertexBlob);
-	opaquePSO.SetPixelShader(pixelBlob);
-	opaquePSO.Finalize();
-	m_PSOs["opaque"] = opaquePSO;
+	{
+		opaquePSO.SetRootSignature(m_RootSignature);
+		opaquePSO.SetRasterizerState(RasterizerDefault);
+		opaquePSO.SetBlendState(BlendDisable);
+		opaquePSO.SetDepthStencilState(DepthStateReadWrite);
+		opaquePSO.SetInputLayout(_countof(mInputLayout), mInputLayout);
+		opaquePSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		opaquePSO.SetRenderTargetFormat(ColorFormat, DepthFormat);
+		opaquePSO.SetVertexShader(vertexBlob);
+		opaquePSO.SetPixelShader(pixelBlob);
+		opaquePSO.Finalize();
+		m_PSOs["opaque"] = opaquePSO;
+	}
+	
 
 	GraphicsPSO transpacrentPSO = opaquePSO;
-	auto blend = Graphics::BlendTraditional;
-	blend.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-	transpacrentPSO.SetBlendState(blend);
-	transpacrentPSO.Finalize();
-	m_PSOs["transparent"] = transpacrentPSO;
+	{
+		auto blend = Graphics::BlendTraditional;
+		blend.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+		transpacrentPSO.SetBlendState(blend);
+		transpacrentPSO.Finalize();
+		m_PSOs["transparent"] = transpacrentPSO;
+	}
+	
 
 	GraphicsPSO alphaTestedPSO = opaquePSO;
-	auto rater = RasterizerDefault;
-	rater.CullMode = D3D12_CULL_MODE_NONE; // not cull 
-	alphaTestedPSO.SetRasterizerState(rater);
-	alphaTestedPSO.Finalize();
-	m_PSOs["alphaTested"] = alphaTestedPSO;
+	{
+		auto rater = RasterizerDefault;
+		rater.CullMode = D3D12_CULL_MODE_NONE; // not cull 
+		alphaTestedPSO.SetRasterizerState(rater);
+		alphaTestedPSO.Finalize();
+		m_PSOs["alphaTested"] = alphaTestedPSO;
+	}
+	
 
+	// reflected PSO
 	GraphicsPSO reflectedPSO = opaquePSO;
-	rater = RasterizerDefault;
-	rater.FrontCounterClockwise = TRUE; // winding order not change, so it shuold be opposite
-	reflectedPSO.SetRasterizerState(rater);
-	reflectedPSO.Finalize();
-	m_PSOs["reflected"] = reflectedPSO;
+	{
+		auto rater = RasterizerDefault;
+		rater.FrontCounterClockwise = TRUE; // winding order not change, so it shuold be opposite
 
+		auto reflections = DepthStateReadWrite;
+		// not allow write depth value, but still depth test
+		reflections.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		reflections.StencilEnable = TRUE;
+		reflections.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		reflections.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		reflections.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		reflections.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL; // equal
+		reflections.BackFace = reflections.FrontFace;
+
+		reflectedPSO.SetRasterizerState(rater);
+		reflectedPSO.SetDepthStencilState(reflections);
+		reflectedPSO.Finalize();
+		m_PSOs["reflected"] = reflectedPSO;
+	}
+	
+	// stencil PSO
+	GraphicsPSO stencilPSO = opaquePSO;
+	{
+		auto depthStencilDesc = DepthStateReadWrite;
+		// not allow write depth value, but still depth test
+		depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		depthStencilDesc.StencilEnable = TRUE;
+		depthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		depthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		depthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE; // replace
+		depthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		depthStencilDesc.BackFace = depthStencilDesc.FrontFace;
+
+		auto blend = BlendTraditional;
+		blend.RenderTarget[0].RenderTargetWriteMask = 0; // not allow write
+
+		stencilPSO.SetBlendState(blend);
+		stencilPSO.SetDepthStencilState(depthStencilDesc);
+		stencilPSO.Finalize();
+
+		m_PSOs["stencil"] = stencilPSO;
+	}
 }
 
 void GameApp::Cleanup(void)
@@ -152,8 +199,6 @@ void GameApp::RenderScene(void)
 	gfxContext.SetRenderTarget(g_DisplayPlane[g_CurrentBuffer].GetRTV(), g_SceneDepthBuffer.GetDSV());
 
 	//set root signature
-	gfxContext.SetPipelineState(m_PSOs["opaque"]);
-
 	gfxContext.SetRootSignature(m_RootSignature);
 
 	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
@@ -163,12 +208,21 @@ void GameApp::RenderScene(void)
 		gfxContext.SetPipelineState(m_PSOs["opaque"]);
 		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::Opaque]);
 
+		// set stencil value
+		gfxContext.SetStencilRef(1);
+		// stencil PSO
+		gfxContext.SetPipelineState(m_PSOs["stencil"]);
+		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::Mirrors]);
+
 		// use reflected light direction
 		gfxContext.SetDynamicConstantBufferView(1, sizeof(reflectedPassConstant), &reflectedPassConstant);
 
 		gfxContext.SetPipelineState(m_PSOs["reflected"]);
 		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::Reflected]);
 
+		// reset the stencil value
+		gfxContext.SetStencilRef(0);
+		// reset the object constants
 		gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
 		gfxContext.SetPipelineState(m_PSOs["transparent"]);
