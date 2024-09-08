@@ -16,6 +16,7 @@ enum class RenderLayer : int
 	AlphaTested,
 	Transparent,
 	Mirrors,
+	Reflected,
 	Count
 };
 
@@ -65,7 +66,8 @@ private:
 	void BuildMaterials();
 	void LoadTextures();
 
-	void UpdatePassConstant(float deltaT);
+	void UpdatePassCB(float deltaT);
+	void UpdateReflectedPassCB(float deltaT);
 	void UpdateSkull(float deltaT);
 
 	RootSignature m_RootSignature;
@@ -74,6 +76,9 @@ private:
 
 	// reflect skull
 	RenderItem* mSkullRitem;
+	RenderItem* mReflectedSkullRitem;
+	RenderItem* mFloorRitem;
+
 	DirectX::XMFLOAT3 mSkullTranslation = { 0.0f, 1.0f, -5.0f };
 
 	// List of all the render items.
@@ -96,6 +101,7 @@ private:
 	DirectX::XMMATRIX m_Projection;
 
 	PassConstants passConstant;
+	PassConstants reflectedPassConstant;
 
 	float m_radius = 5.0f;
 	// x方向弧度

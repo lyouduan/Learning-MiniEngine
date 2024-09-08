@@ -105,6 +105,13 @@ void GameApp::Startup(void)
 	alphaTestedPSO.Finalize();
 	m_PSOs["alphaTested"] = alphaTestedPSO;
 
+	GraphicsPSO reflectedPSO = opaquePSO;
+	rater = RasterizerDefault;
+	rater.FrontCounterClockwise = TRUE; // winding order not change, so it shuold be opposite
+	reflectedPSO.SetRasterizerState(rater);
+	reflectedPSO.Finalize();
+	m_PSOs["reflected"] = reflectedPSO;
+
 }
 
 void GameApp::Cleanup(void)
@@ -119,7 +126,8 @@ void GameApp::Cleanup(void)
 
 void GameApp::Update(float deltaT)
 {
-	UpdatePassConstant(deltaT);
+	UpdatePassCB(deltaT);
+	UpdateReflectedPassCB(deltaT);
 
 	UpdateSkull(deltaT);
 }
@@ -154,6 +162,14 @@ void GameApp::RenderScene(void)
 	{
 		gfxContext.SetPipelineState(m_PSOs["opaque"]);
 		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::Opaque]);
+
+		// use reflected light direction
+		gfxContext.SetDynamicConstantBufferView(1, sizeof(reflectedPassConstant), &reflectedPassConstant);
+
+		gfxContext.SetPipelineState(m_PSOs["reflected"]);
+		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::Reflected]);
+
+		gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
 		gfxContext.SetPipelineState(m_PSOs["transparent"]);
 		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::Transparent]);
@@ -207,6 +223,11 @@ void GameApp::BuildRoomRenderItems()
 	floorRitem->BaseVertexLocation = floorRitem->Geo->DrawArgs["floor"].BaseVertexLocation;
 	floorRitem->srv = m_Textures["checkboard"].GetSRV();
 	m_RItemLayer[(int)RenderLayer::Opaque].push_back(floorRitem.get());
+
+	auto reflectedFloorRitem = std::make_unique<RenderItem>();
+	*reflectedFloorRitem = *floorRitem;
+	mFloorRitem = reflectedFloorRitem.get();
+	m_RItemLayer[(int)RenderLayer::Reflected].push_back(reflectedFloorRitem.get());
 	
 	auto wallsRitem = std::make_unique<RenderItem>();
 	wallsRitem->World = XMMatrixIdentity();
@@ -233,6 +254,11 @@ void GameApp::BuildRoomRenderItems()
 	mSkullRitem = skullRitem.get();
 	m_RItemLayer[(int)RenderLayer::Opaque].push_back(skullRitem.get());
 
+	auto reflectedSkullRitem = std::make_unique<RenderItem>();
+	*reflectedSkullRitem = *skullRitem;
+	mReflectedSkullRitem = reflectedSkullRitem.get();
+	m_RItemLayer[(int)RenderLayer::Reflected].push_back(reflectedSkullRitem.get());
+
 	auto mirrorRitem = std::make_unique<RenderItem>();
 	mirrorRitem->World = XMMatrixIdentity();
 	mirrorRitem->TexTransform = XMMatrixIdentity();
@@ -244,12 +270,16 @@ void GameApp::BuildRoomRenderItems()
 	mirrorRitem->BaseVertexLocation = mirrorRitem->Geo->DrawArgs["mirror"].BaseVertexLocation;
 	mirrorRitem->srv = m_Textures["ice"].GetSRV();
 
+	
+
 	m_RItemLayer[(int)RenderLayer::Mirrors].push_back(mirrorRitem.get());
 	m_RItemLayer[(int)RenderLayer::Transparent].push_back(mirrorRitem.get());
 
+	m_AllRenders.push_back(std::move(reflectedFloorRitem));
 	m_AllRenders.push_back(std::move(floorRitem));
 	m_AllRenders.push_back(std::move(wallsRitem));
 	m_AllRenders.push_back(std::move(skullRitem));
+	m_AllRenders.push_back(std::move(reflectedSkullRitem));
 	m_AllRenders.push_back(std::move(mirrorRitem));
 
 }
@@ -455,7 +485,7 @@ void GameApp::LoadTextures()
 	
 }
 
-void GameApp::UpdatePassConstant(float deltaT)
+void GameApp::UpdatePassCB(float deltaT)
 {
 	if (GameInput::IsPressed(GameInput::kMouse0) || GameInput::IsPressed(GameInput::kMouse1)) {
 		// Make each pixel correspond to a quarter of a degree.
@@ -522,6 +552,22 @@ void GameApp::UpdatePassConstant(float deltaT)
 	passConstant.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
 }
 
+void GameApp::UpdateReflectedPassCB(float deltaT)
+{
+	reflectedPassConstant = passConstant;
+
+	XMVECTOR mirrorPlane = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f); // xy plane
+	XMMATRIX R = XMMatrixReflect(mirrorPlane);
+
+	for (int i = 0; i < 3; ++i)
+	{
+		XMVECTOR lightDir = XMLoadFloat3(&passConstant.Lights[i].Direction);
+		// transforms a 3D vector representing a normal by a matrix.
+		XMVECTOR reflectionLightDir = XMVector3TransformNormal(lightDir, R);
+		XMStoreFloat3(&reflectedPassConstant.Lights[i].Direction, reflectionLightDir);
+	}
+}
+
 void GameApp::UpdateSkull(float deltaT)
 {
 	if (GameInput::IsFirstPressed(GameInput::kKey_a))
@@ -542,5 +588,13 @@ void GameApp::UpdateSkull(float deltaT)
 	XMMATRIX skullOffset = XMMatrixTranslation(mSkullTranslation.x, mSkullTranslation.y, mSkullTranslation.z);
 	XMMATRIX skullWorld = skullRotate * skullScale * skullOffset;
 	mSkullRitem->World = skullWorld;
+
+	// reflection world matrix
+	XMVECTOR mirrorPlane = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f); // xy plane
+	XMMATRIX R = XMMatrixReflect(mirrorPlane);
+	mReflectedSkullRitem->World = skullWorld * R;
+
+
+	mFloorRitem->World = XMMatrixIdentity() * R;
 }
 
