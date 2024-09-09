@@ -160,6 +160,28 @@ void GameApp::Startup(void)
 		m_PSOs["stencil"] = stencilPSO;
 	}
 
+	// stencil write PSO
+	GraphicsPSO stencilWritePSO = opaquePSO;
+	{
+		auto depthStencilDesc = DepthStateReadWrite;
+		// not allow write depth value, but still depth test
+		depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		depthStencilDesc.StencilEnable = TRUE;
+		depthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		depthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		depthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE; // replace
+		depthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		depthStencilDesc.BackFace = depthStencilDesc.FrontFace;
+
+		auto blend = BlendTraditional;
+		blend.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+
+		stencilWritePSO.SetBlendState(blend);
+		stencilWritePSO.SetDepthStencilState(depthStencilDesc);
+		stencilWritePSO.Finalize();
+
+		m_PSOs["stencilWrite"] = stencilWritePSO;
+	}
 	// shadow stencil PSO
 	GraphicsPSO shadowPSO = opaquePSO;
 	{
@@ -248,17 +270,21 @@ void GameApp::RenderScene(void)
 
 		// reset the stencil value
 		gfxContext.SetStencilRef(0);
-		
 		// reset the object constants
 		gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 		
 		gfxContext.SetPipelineState(m_PSOs["transparent"]);
 		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::Transparent]);
 
+		// set stencil value
+		gfxContext.SetStencilRef(1);
+		// stencil PSO
+		gfxContext.SetPipelineState(m_PSOs["stencilWrite"]);
+		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::ShadowPlane]);
+
 		gfxContext.SetPipelineState(m_PSOs["shadow"]);
 		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::Shadow]);
-
-
+		gfxContext.SetStencilRef(0);
 
 	}
 		
@@ -308,7 +334,8 @@ void GameApp::BuildRoomRenderItems()
 	floorRitem->StartIndexLocation = floorRitem->Geo->DrawArgs["floor"].StartIndexLocation;
 	floorRitem->BaseVertexLocation = floorRitem->Geo->DrawArgs["floor"].BaseVertexLocation;
 	floorRitem->srv = m_Textures["checkboard"].GetSRV();
-	m_RItemLayer[(int)RenderLayer::Opaque].push_back(floorRitem.get());
+	//m_RItemLayer[(int)RenderLayer::Opaque].push_back(floorRitem.get());
+	m_RItemLayer[(int)RenderLayer::ShadowPlane].push_back(floorRitem.get());
 
 	auto reflectedFloorRitem = std::make_unique<RenderItem>();
 	*reflectedFloorRitem = *floorRitem;
@@ -631,12 +658,13 @@ void GameApp::UpdatePassCB(float deltaT)
 	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(m_View * m_Projection)); // hlsl 列主序矩阵
 
 	// light
-	XMVECTOR lightDir = -DirectX::XMVectorSet(
-		1.0f * sinf(mSunTheta) * cosf(mSunTheta),
-		1.0f * cosf(mSunTheta),
-		1.0f * sinf(mSunTheta) * sinf(mSunTheta),
-		1.0f);
-	XMStoreFloat3(&passConstant.Lights[0].Direction, lightDir);
+	//XMVECTOR lightDir = -DirectX::XMVectorSet(
+	//	1.0f * sinf(mSunTheta) * cosf(mSunTheta),
+	//	1.0f * cosf(mSunTheta),
+	//	1.0f * sinf(mSunTheta) * sinf(mSunTheta),
+	//	1.0f);
+	//XMStoreFloat3(&passConstant.Lights[0].Direction, lightDir);
+	passConstant.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
 	passConstant.Lights[0].Strength = { 0.9f, 0.9f, 0.9f };
 	passConstant.Lights[0].FalloffEnd = 100.0;
 	passConstant.Lights[0].Position = { 0.0f, 10.0f, -10.0f };

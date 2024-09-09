@@ -19,6 +19,7 @@ enum class RenderLayer : int
 	Reflected,
 	Shadow,
 	ReflectedShadow,
+	ShadowPlane,
 	Count
 };
 
