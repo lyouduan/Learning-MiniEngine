@@ -17,6 +17,8 @@ enum class RenderLayer : int
 	Transparent,
 	Mirrors,
 	Reflected,
+	Shadow,
+	ReflectedShadow,
 	Count
 };
 
@@ -69,6 +71,7 @@ private:
 	void UpdatePassCB(float deltaT);
 	void UpdateReflectedPassCB(float deltaT);
 	void UpdateSkull(float deltaT);
+	void UpdateShadow(float deltaT);
 
 	RootSignature m_RootSignature;
 
@@ -76,7 +79,9 @@ private:
 
 	// reflect skull
 	RenderItem* mSkullRitem;
+	RenderItem* mSkullShadowRitem;
 	RenderItem* mReflectedSkullRitem;
+	RenderItem* mReflectedSkullShadowRitem;
 	RenderItem* mFloorRitem;
 
 	DirectX::XMFLOAT3 mSkullTranslation = { 0.0f, 1.0f, -5.0f };

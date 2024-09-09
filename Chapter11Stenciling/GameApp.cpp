@@ -159,6 +159,28 @@ void GameApp::Startup(void)
 
 		m_PSOs["stencil"] = stencilPSO;
 	}
+
+	// shadow stencil PSO
+	GraphicsPSO shadowPSO = opaquePSO;
+	{
+		auto depthStencilDesc = DepthStateReadWrite;
+		depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		depthStencilDesc.StencilEnable = TRUE;
+		depthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		depthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		depthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_INCR; // replace
+		depthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
+		depthStencilDesc.BackFace = depthStencilDesc.FrontFace;
+
+		auto blend = BlendTraditional;
+		blend.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+
+		shadowPSO.SetBlendState(blend);
+		shadowPSO.SetDepthStencilState(depthStencilDesc);
+		shadowPSO.Finalize();
+
+		m_PSOs["shadow"] = shadowPSO;
+	}
 }
 
 void GameApp::Cleanup(void)
@@ -177,6 +199,7 @@ void GameApp::Update(float deltaT)
 	UpdateReflectedPassCB(deltaT);
 
 	UpdateSkull(deltaT);
+	UpdateShadow(deltaT);
 }
 
 void GameApp::RenderScene(void)
@@ -220,13 +243,22 @@ void GameApp::RenderScene(void)
 		gfxContext.SetPipelineState(m_PSOs["reflected"]);
 		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::Reflected]);
 
+		gfxContext.SetPipelineState(m_PSOs["shadow"]);
+		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::ReflectedShadow]);
+
 		// reset the stencil value
 		gfxContext.SetStencilRef(0);
+		
 		// reset the object constants
 		gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
-
+		
 		gfxContext.SetPipelineState(m_PSOs["transparent"]);
 		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::Transparent]);
+
+		gfxContext.SetPipelineState(m_PSOs["shadow"]);
+		DrawRenderItems(gfxContext, m_RItemLayer[(int)RenderLayer::Shadow]);
+
+
 
 	}
 		
@@ -313,6 +345,18 @@ void GameApp::BuildRoomRenderItems()
 	mReflectedSkullRitem = reflectedSkullRitem.get();
 	m_RItemLayer[(int)RenderLayer::Reflected].push_back(reflectedSkullRitem.get());
 
+	auto skullShadowRitem = std::make_unique<RenderItem>();
+	*skullShadowRitem = *skullRitem;
+	skullShadowRitem->Mat = m_Materials["shadowMat"].get();
+	mSkullShadowRitem = skullShadowRitem.get();
+	m_RItemLayer[(int)RenderLayer::Shadow].push_back(skullShadowRitem.get());
+
+	auto reflectedSkullShadowRitem = std::make_unique<RenderItem>();
+	*reflectedSkullShadowRitem = *reflectedSkullRitem;
+	reflectedSkullShadowRitem->Mat = m_Materials["shadowMat"].get();
+	mReflectedSkullShadowRitem = reflectedSkullShadowRitem.get();
+	m_RItemLayer[(int)RenderLayer::ReflectedShadow].push_back(reflectedSkullShadowRitem.get());
+
 	auto mirrorRitem = std::make_unique<RenderItem>();
 	mirrorRitem->World = XMMatrixIdentity();
 	mirrorRitem->TexTransform = XMMatrixIdentity();
@@ -324,8 +368,6 @@ void GameApp::BuildRoomRenderItems()
 	mirrorRitem->BaseVertexLocation = mirrorRitem->Geo->DrawArgs["mirror"].BaseVertexLocation;
 	mirrorRitem->srv = m_Textures["ice"].GetSRV();
 
-	
-
 	m_RItemLayer[(int)RenderLayer::Mirrors].push_back(mirrorRitem.get());
 	m_RItemLayer[(int)RenderLayer::Transparent].push_back(mirrorRitem.get());
 
@@ -334,6 +376,8 @@ void GameApp::BuildRoomRenderItems()
 	m_AllRenders.push_back(std::move(wallsRitem));
 	m_AllRenders.push_back(std::move(skullRitem));
 	m_AllRenders.push_back(std::move(reflectedSkullRitem));
+	m_AllRenders.push_back(std::move(skullShadowRitem));
+	m_AllRenders.push_back(std::move(reflectedSkullShadowRitem));
 	m_AllRenders.push_back(std::move(mirrorRitem));
 
 }
@@ -648,7 +692,24 @@ void GameApp::UpdateSkull(float deltaT)
 	XMMATRIX R = XMMatrixReflect(mirrorPlane);
 	mReflectedSkullRitem->World = skullWorld * R;
 
-
 	mFloorRitem->World = XMMatrixIdentity() * R;
+}
+
+void GameApp::UpdateShadow(float deltaT)
+{
+	// shadow plane
+	XMVECTOR shadowPlane = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); // y plane
+	// main light direction
+	XMVECTOR lightDir = -XMLoadFloat3(&passConstant.Lights[0].Direction);
+	XMMATRIX M = XMMatrixShadow(shadowPlane, lightDir);
+	XMMATRIX shadowOffset = XMMatrixTranslation(0.0, 0.0001, 0.0);
+
+	mSkullShadowRitem->World = mSkullRitem->World * M * shadowOffset;
+
+	// reflected shadow plane
+	XMVECTOR lightDir2 = -XMLoadFloat3(&reflectedPassConstant.Lights[0].Direction);
+	XMMATRIX M2 = XMMatrixShadow(shadowPlane, lightDir2);
+	shadowOffset = XMMatrixTranslation(0.0, 0.0005, 0.0); // 镜面的z-fighting更严重点，偏移更大
+	mReflectedSkullShadowRitem->World = mReflectedSkullRitem->World * M2 * shadowOffset;
 }
 
