@@ -2,13 +2,15 @@
 
 #include "LightingUtil.hlsli"
 
-Texture2D gDiffuseMap : register(t0);
+Texture2DArray gDiffuseMap : register(t0);
 
 SamplerState gsamLinearClamp : register(s0);
 
 float4 main(GeoOut input) : SV_Target
 {
-    float4 diffuseAlbedo = gDiffuseMap.Sample(gsamLinearClamp, input.tex) * matConstants.gDiffuseAlbedo;
+    float3 uvw = float3(input.tex, input.PrimID % 4);
+
+    float4 diffuseAlbedo = gDiffuseMap.Sample(gsamLinearClamp, uvw) * matConstants.gDiffuseAlbedo;
 // alpha tested
     clip(diffuseAlbedo.a - 0.1f);
     

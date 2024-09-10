@@ -645,7 +645,7 @@ void GameApp::LoadTextures()
 	if (white1x1Tex.IsValid())
 		m_Textures["white1x1"] = white1x1Tex;
 
-	TextureRef treeTex = TextureManager::LoadDDSFromFile(L"tree02S.dds");
+	TextureRef treeTex = TextureManager::LoadDDSFromFile(L"treeArray.dds");
 	if (treeTex.IsValid())
 		m_Textures["tree"] = treeTex;
 
