@@ -156,8 +156,10 @@ void GameApp::Startup(void)
 	blurFilter.Initialize(L"blur filter", g_DisplayWidth, g_DisplayHeight, ColorFormat, blurVertBlob, blurHorzBlob);
 
 	ComPtr<ID3DBlob> sobelBlob;
+	ComPtr<ID3DBlob> addBlob;
 	D3DReadFileToBlob(L"shader/CSSobelFiter.cso", &sobelBlob);
-	sobelFilter.Initialize(L"sobel filter", g_DisplayWidth, g_DisplayHeight, ColorFormat, sobelBlob);
+	D3DReadFileToBlob(L"shader/CSAdd.cso", &addBlob);
+	sobelFilter.Initialize(L"sobel filter", g_DisplayWidth, g_DisplayHeight, ColorFormat, sobelBlob, addBlob);
 }
 
 void GameApp::Cleanup(void)
@@ -295,12 +297,15 @@ void GameApp::RenderScene(void)
 	// 完成之前的绘制
 	gfxContext.Flush(true);
 
-	//blurFilter.Execute(g_DisplayPlane[g_CurrentBuffer], 5);
-	//gfxContext.CopyBuffer(g_DisplayPlane[g_CurrentBuffer], blurFilter.GetBlurMap());
+	blurFilter.Execute(g_DisplayPlane[g_CurrentBuffer], 5);
+	gfxContext.CopyBuffer(g_DisplayPlane[g_CurrentBuffer], blurFilter.GetBlurMap());
+
+	// 完成之前的绘制
+	gfxContext.Flush(true);
 
 	sobelFilter.Execute(g_DisplayPlane[g_CurrentBuffer]);
 
-	gfxContext.CopyBuffer(g_DisplayPlane[g_CurrentBuffer], sobelFilter.GetOutput());
+	gfxContext.CopyBuffer(g_DisplayPlane[g_CurrentBuffer], sobelFilter.GetAddResult());
 
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 

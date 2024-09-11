@@ -20,10 +20,19 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
         }
     }
     
+    // This kernel detects edges in the vertical direction
+    // [-1, 0, 1]
+    // [-2, 0, 2]
+    // [-1, 0, 1]
     float4 Gx = -1.0 * c[0][0] - 2.0 * c[1][0] - 1.0 * c[2][0] + 1.0 * c[0][2] + 2.0 * c[1][2] + 1.0 * c[2][2];
     
+     // This kernel detects edges in the horizontal  direction
+    // [ 1,  2,  1]
+    // [ 0,  0,  0]
+    // [-1, -2, -1]
     float4 Gy = -1.0 * c[2][0] - 2.0 * c[2][1] - 1.0 * c[2][1] + 1.0 * c[0][0] + 2.0 * c[0][1] + 1.0 * c[0][2];
 
+    // 灰度图梯度变化率
     float4 mag = sqrt(Gx * Gx + Gy * Gy);
     
     mag = 1.0f - saturate(CalcLuminance(mag.rgb));

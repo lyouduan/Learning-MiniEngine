@@ -294,5 +294,6 @@
     <FxCompile Include="shader\CSVertBlur.hlsl" />
     <FxCompile Include="shader\CSHorzBlur.hlsl" />
     <FxCompile Include="shader\CSSobelFiter.hlsl" />
+    <FxCompile Include="shader\CSAdd.hlsl" />
   </ItemGroup>
 </Project>

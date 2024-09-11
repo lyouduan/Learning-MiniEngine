@@ -15,27 +15,31 @@ public:
 
 	void Destroy() 
 	{ 
-		Output.Destroy(); 
-		m_PSO.DesytroyAll();
+		m_SobelBuffer.Destroy();
+		m_AddBuffer.Destroy();
+		m_PSOSobel.DesytroyAll();
+		m_PSOAdd.DesytroyAll();
 		m_RootSig.DestroyAll();
 	}
 
-	void Initialize(const std::wstring& name, UINT width, UINT height, DXGI_FORMAT format, const Microsoft::WRL::ComPtr<ID3DBlob>& Binary);
+	void Initialize(const std::wstring& name, UINT width, UINT height, DXGI_FORMAT format, const Microsoft::WRL::ComPtr<ID3DBlob>& sobelCS, const Microsoft::WRL::ComPtr<ID3DBlob>& addCS);
 
-	void Execute(ColorBuffer& input);
+	void Execute(GpuResource& input);
 
-	ColorBuffer& GetOutput() { return Output; }
+	ColorBuffer& GetSobelResult() { return m_SobelBuffer; }
+	ColorBuffer& GetAddResult() { return m_AddBuffer; }
 private:
 
 	UINT m_Width;
 	UINT m_Height;
 	DXGI_FORMAT m_Format;
 
-	ColorBuffer Output;
-	ColorBuffer input;
+	ColorBuffer m_SobelBuffer;
+	ColorBuffer m_AddBuffer;
 
 	// pso
-	ComputePSO m_PSO;
+	ComputePSO m_PSOSobel;
+	ComputePSO m_PSOAdd;
 
 	// root signature
 	RootSignature m_RootSig;
