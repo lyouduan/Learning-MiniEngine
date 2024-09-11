@@ -11,6 +11,7 @@
 #include "TextureManager.h"
 #include "DescriptorHeap.h"
 #include "BlurFilter.h"
+#include "SobelFilter.h"
 
 #include <fstream>
 #include <d3dcompiler.h>
@@ -85,14 +86,6 @@ void GameApp::Startup(void)
 	DXGI_FORMAT ColorFormat = g_DisplayPlane[g_CurrentBuffer].GetFormat();
 	DXGI_FORMAT DepthFormat = g_SceneDepthBuffer.GetFormat();
 
-	ComPtr<ID3DBlob> vertBlob;
-	ComPtr<ID3DBlob> horzBlob;
-	D3DReadFileToBlob(L"shader/CSVertBlur.cso", &vertBlob);
-	D3DReadFileToBlob(L"shader/CSHorzBlur.cso", &horzBlob);
-
-	// init blurfilter
-	blurFilter.Initialize(L"blur filter", g_DisplayWidth, g_DisplayHeight, ColorFormat, vertBlob, horzBlob);
-
 	// shader 
 	ComPtr<ID3DBlob> vertexBlob;
 	ComPtr<ID3DBlob> pixelBlob;
@@ -151,6 +144,20 @@ void GameApp::Startup(void)
 	billboardPSO.SetGeometryShader(GSBlob);
 	billboardPSO.Finalize();
 	m_PSOs["billboard"] = billboardPSO;
+
+	//
+	// post process
+	//
+	ComPtr<ID3DBlob> blurVertBlob;
+	ComPtr<ID3DBlob> blurHorzBlob;
+	D3DReadFileToBlob(L"shader/CSVertBlur.cso", &blurVertBlob);
+	D3DReadFileToBlob(L"shader/CSHorzBlur.cso", &blurHorzBlob);
+	// init blurfilter
+	blurFilter.Initialize(L"blur filter", g_DisplayWidth, g_DisplayHeight, ColorFormat, blurVertBlob, blurHorzBlob);
+
+	ComPtr<ID3DBlob> sobelBlob;
+	D3DReadFileToBlob(L"shader/CSSobelFiter.cso", &sobelBlob);
+	sobelFilter.Initialize(L"sobel filter", g_DisplayWidth, g_DisplayHeight, ColorFormat, sobelBlob);
 }
 
 void GameApp::Cleanup(void)
@@ -165,6 +172,9 @@ void GameApp::Cleanup(void)
 	m_Materials.clear();
 	m_Geometry.clear();
 	m_PSOs.clear();
+
+	blurFilter.Destroy();
+	sobelFilter.Destroy();
 
 	delete m_WavesRitem;
 }
@@ -285,9 +295,12 @@ void GameApp::RenderScene(void)
 	// 完成之前的绘制
 	gfxContext.Flush(true);
 
-	blurFilter.Execute(g_DisplayPlane[g_CurrentBuffer], 5);
-	
-	gfxContext.CopyBuffer(g_DisplayPlane[g_CurrentBuffer], blurFilter.GetBlurMap());
+	//blurFilter.Execute(g_DisplayPlane[g_CurrentBuffer], 5);
+	//gfxContext.CopyBuffer(g_DisplayPlane[g_CurrentBuffer], blurFilter.GetBlurMap());
+
+	sobelFilter.Execute(g_DisplayPlane[g_CurrentBuffer]);
+
+	gfxContext.CopyBuffer(g_DisplayPlane[g_CurrentBuffer], sobelFilter.GetOutput());
 
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 

@@ -10,6 +10,7 @@
 #include <memory>
 #include "TextureManager.h"
 #include "BlurFilter.h"
+#include "SobelFilter.h"
 
 enum class RenderLayer : int
 {
@@ -94,6 +95,7 @@ private:
 	
 	// postProcess blur
 	BlurFilter blurFilter;
+	SobelFilter sobelFilter;
 
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;

@@ -162,6 +162,9 @@
     <ClInclude Include="BlurFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SobelFilter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GameApp.cpp">
@@ -269,6 +272,9 @@
     <ClCompile Include="BlurFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SobelFilter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Core\Math\Functions.inl">
@@ -287,5 +293,6 @@
     <FxCompile Include="shader\PixelShader.hlsl" />
     <FxCompile Include="shader\CSVertBlur.hlsl" />
     <FxCompile Include="shader\CSHorzBlur.hlsl" />
+    <FxCompile Include="shader\CSSobelFiter.hlsl" />
   </ItemGroup>
 </Project>

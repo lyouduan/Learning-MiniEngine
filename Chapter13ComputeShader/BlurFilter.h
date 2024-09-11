@@ -14,6 +14,15 @@ public:
 	BlurFilter& operator=(const BlurFilter& rhs) = delete;
 	~BlurFilter() = default;
 
+	void Destroy()
+	{
+		m_BlurMap0.Destroy();
+		m_BlurMap1.Destroy();
+		m_PSOHorz.DesytroyAll();
+		m_PSOVert.DesytroyAll();
+		m_ComputeRootSig.DestroyAll();
+	}
+
 	ColorBuffer& GetBlurMap() { return m_BlurMap0; }
 
 	void Initialize(const std::wstring& name, UINT width, UINT height, DXGI_FORMAT format, 
