@@ -10,6 +10,8 @@
 #include "GeometryGenerator.h"
 #include "TextureManager.h"
 #include "DescriptorHeap.h"
+#include "BlurFilter.h"
+
 #include <fstream>
 #include <d3dcompiler.h>
 #include <array>
@@ -53,6 +55,8 @@ void GameApp::Startup(void)
 	// build render items
 	BuildLandRenderItems();
 
+	
+
 	// initialize root signature
 	m_RootSignature.Reset(4, 1);
 	m_RootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
@@ -80,6 +84,14 @@ void GameApp::Startup(void)
 
 	DXGI_FORMAT ColorFormat = g_DisplayPlane[g_CurrentBuffer].GetFormat();
 	DXGI_FORMAT DepthFormat = g_SceneDepthBuffer.GetFormat();
+
+	ComPtr<ID3DBlob> vertBlob;
+	ComPtr<ID3DBlob> horzBlob;
+	D3DReadFileToBlob(L"shader/CSVertBlur.cso", &vertBlob);
+	D3DReadFileToBlob(L"shader/CSHorzBlur.cso", &horzBlob);
+
+	// init blurfilter
+	blurFilter.Initialize(L"blur filter", g_DisplayWidth, g_DisplayHeight, ColorFormat, vertBlob, horzBlob);
 
 	// shader 
 	ComPtr<ID3DBlob> vertexBlob;
@@ -269,8 +281,14 @@ void GameApp::RenderScene(void)
 		gfxContext.SetPipelineState(m_PSOs["transparent"]);
 		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::Transparent]);
 	}
-		
+
+	// 完成之前的绘制
+	gfxContext.Flush(true);
+
+	blurFilter.Execute(g_DisplayPlane[g_CurrentBuffer], 5);
 	
+	gfxContext.CopyBuffer(g_DisplayPlane[g_CurrentBuffer], blurFilter.GetBlurMap());
+
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 
 	gfxContext.Finish();

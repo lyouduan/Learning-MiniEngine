@@ -523,3 +523,40 @@ void GraphicsContext::SetScissor(UINT left, UINT top, UINT right, UINT bottom)
 {
     SetScissor(CD3DX12_RECT(left, top, right, bottom));
 }
+
+ComputeContext& ComputeContext::Begin(const std::wstring& ID, bool Async)
+{
+    ComputeContext& NewContext = g_ContextManager.AllocateContext(
+        Async ? D3D12_COMMAND_LIST_TYPE_COMPUTE : D3D12_COMMAND_LIST_TYPE_DIRECT)->GetComputeContext();
+
+    NewContext.SetID(ID);
+
+    return NewContext;
+}
+
+void ComputeContext::ClearUAV(GpuBuffer& Target)
+{
+    FlushResourceBarriers();
+
+    // After binding a UAV, we can get a GPU handle that is required to clear it as a UAV (because it essentially runs
+    // a shader to set all of the values).
+    D3D12_GPU_DESCRIPTOR_HANDLE GpuVisibleHandle = m_DynamicSamplerDescriptorHeap.UploadDirect(Target.GetUAV());
+    const UINT ClearColor[4] = {};
+    m_CommandList->ClearUnorderedAccessViewUint(GpuVisibleHandle, Target.GetUAV(), Target.GetResource(),
+        ClearColor, 0, nullptr);
+}
+
+void ComputeContext::ClearUAV(ColorBuffer& Target)
+{
+    FlushResourceBarriers();
+
+    // After binding a UAV, we can get a GPU handle that is required to clear it as a UAV (because it essentially runs
+    // a shader to set all of the values).
+    D3D12_GPU_DESCRIPTOR_HANDLE GpuVisibleHandle = m_DynamicSamplerDescriptorHeap.UploadDirect(Target.GetUAV());
+    
+    CD3DX12_RECT ClearRect(0, 0, (LONG)Target.GetWidth(), (LONG)Target.GetHeight());
+    const float* ClearColor = Target.GetClearColor().GetPtr();
+    
+    m_CommandList->ClearUnorderedAccessViewFloat(GpuVisibleHandle, Target.GetUAV(), Target.GetResource(),
+        ClearColor, 1, &ClearRect);
+}

@@ -86,3 +86,25 @@ private:
 
 };
 
+class ComputePSO : public PSO
+{
+	friend class CommandContext;
+
+public:
+	ComputePSO(const wchar_t* Name = L"Unnamed ComputePSO PSO");
+
+	void SetComputeShader(const void* Binary, size_t Size) {
+		m_PSODesc.CS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size);
+	}
+
+	void SetComputeShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.CS = Binary; }
+
+	void SetComputeShader(const Microsoft::WRL::ComPtr<ID3DBlob>& Binary) {
+		m_PSODesc.CS = CD3DX12_SHADER_BYTECODE(static_cast<void*>(Binary->GetBufferPointer()), Binary->GetBufferSize());
+	}
+
+	void Finalize();
+
+private:
+	D3D12_COMPUTE_PIPELINE_STATE_DESC m_PSODesc;
+};

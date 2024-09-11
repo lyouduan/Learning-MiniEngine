@@ -159,6 +159,9 @@
     <ClInclude Include="Core\GraphicsCore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="BlurFilter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GameApp.cpp">
@@ -263,6 +266,9 @@
     <ClCompile Include="Core\GraphicsCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="BlurFilter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Core\Math\Functions.inl">
@@ -271,6 +277,7 @@
     <None Include="shader\common.hlsli" />
     <None Include="shader\GScommon.hlsli" />
     <None Include="shader\LightingUtil.hlsli" />
+    <None Include="shader\CSCommon.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader\VertexShader.hlsl" />
@@ -278,5 +285,7 @@
     <FxCompile Include="shader\GSPixelShader.hlsl" />
     <FxCompile Include="shader\GSVertexShader.hlsl" />
     <FxCompile Include="shader\PixelShader.hlsl" />
+    <FxCompile Include="shader\CSVertBlur.hlsl" />
+    <FxCompile Include="shader\CSHorzBlur.hlsl" />
   </ItemGroup>
 </Project>

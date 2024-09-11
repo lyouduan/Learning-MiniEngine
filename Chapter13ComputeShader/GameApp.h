@@ -9,6 +9,7 @@
 #include "d3dUtil.h"
 #include <memory>
 #include "TextureManager.h"
+#include "BlurFilter.h"
 
 enum class RenderLayer : int
 {
@@ -70,6 +71,7 @@ private:
 
 	void BuildMaterials();
 	void LoadTextures();
+	
 	RootSignature m_RootSignature;
 
 	std::unordered_map<std::string, GraphicsPSO> m_PSOs;
@@ -89,6 +91,9 @@ private:
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometry;
 	// texture manager
 	std::unordered_map<std::string, TextureRef> m_Textures; // work
+	
+	// postProcess blur
+	BlurFilter blurFilter;
 
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;

@@ -5,7 +5,7 @@ class GpuResource
 {
     friend class CommandContext;
     friend class GraphicsContext;
-    //friend class ComputeContext;
+    friend class ComputeContext;
 
 public:
     GpuResource() :
