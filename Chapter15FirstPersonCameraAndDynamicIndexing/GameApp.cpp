@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "GameApp.h"
 #include "GameCore.h"
 #include "CommandContext.h"
@@ -30,7 +31,7 @@ GameApp::GameApp(void)
 	m_Viewport.MinDepth = 0.0f;
 	m_Viewport.MaxDepth = 1.0f;
 	 
-	m_aspectRatio = static_cast<float>(g_DisplayWidth) / static_cast<float>(g_DisplayHeight);
+	m_aspectRatio = static_cast<float>(g_DisplayHeight) / static_cast<float>(g_DisplayWidth);
 
 	mWaves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
@@ -85,9 +86,9 @@ void GameApp::Startup(void)
 	// PSO
 	GraphicsPSO opaquePSO;
 	opaquePSO.SetRootSignature(m_RootSignature);
-	opaquePSO.SetRasterizerState(RasterizerDefault);
+	opaquePSO.SetRasterizerState(RasterizerDefaultCCw); // yz
 	opaquePSO.SetBlendState(BlendDisable);
-	opaquePSO.SetDepthStencilState(DepthStateReadWrite);
+	opaquePSO.SetDepthStencilState(DepthStateReadWriteRZ);// reversed-z
 	opaquePSO.SetInputLayout(_countof(mInputLayout), mInputLayout);
 	opaquePSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 	opaquePSO.SetRenderTargetFormat(ColorFormat, DepthFormat);
@@ -132,53 +133,20 @@ void GameApp::Cleanup(void)
 
 void GameApp::Update(float deltaT)
 {
+	// update camera 
+	UpdateCamera(deltaT);
+	// update waves
+	UpdateWaves(deltaT);
+
+
 	if (GameInput::IsFirstPressed(GameInput::kKey_f1))
 		m_bRenderShapes = !m_bRenderShapes;
 
-	if (GameInput::IsPressed(GameInput::kMouse0) || GameInput::IsPressed(GameInput::kMouse1)) {
-		// Make each pixel correspond to a quarter of a degree.
-		float dx = m_xLast - GameInput::GetAnalogInput(GameInput::kAnalogMouseX);
-		float dy = GameInput::GetAnalogInput(GameInput::kAnalogMouseY) - m_yLast;
+	
+	m_View = camera.GetViewMatrix();
+	m_Projection = camera.GetProjMatrix();
 
-		if (GameInput::IsPressed(GameInput::kMouse0))
-		{
-			// Update angles based on input to orbit camera around box.
-			m_xRotate += (dx - m_xDiff);
-			m_yRotate += (dy - m_yDiff);
-			m_yRotate = (std::max)(-XM_PIDIV2 + 0.1f, m_yRotate);
-			m_yRotate = (std::min)(XM_PIDIV2 - 0.1f, m_yRotate);
-		}
-		else
-		{
-			m_radius += dx - dy - (m_xDiff - m_yDiff);
-		}
-
-		m_xDiff = dx;
-		m_yDiff = dy;
-
-		m_xLast += GameInput::GetAnalogInput(GameInput::kAnalogMouseX);
-		m_yLast += GameInput::GetAnalogInput(GameInput::kAnalogMouseY);
-	}
-	else
-	{
-		m_xDiff = 0.0f;
-		m_yDiff = 0.0f;
-		m_xLast = 0.0f;
-		m_yLast = 0.0f;
-	}
-
-	float x = m_radius * cosf(m_yRotate) * sinf(m_xRotate);
-	float y = m_radius * sinf(m_yRotate);
-	float z = m_radius * cosf(m_yRotate) * cosf(m_xRotate);
-
-	// Update the view matrix.
-	const XMVECTOR eyePosition = XMVectorSet(x, y, z, 1); // point
-	const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1); // point
-	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
-	m_View = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
-	m_Projection = XMMatrixPerspectiveFovLH(0.25f * XM_PI, m_aspectRatio, 0.1f, 1000.0f);
-
-	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(m_View * m_Projection)); // hlsl 列主序矩阵
+	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(camera.GetViewProjMatrix())); // hlsl 列主序矩阵
 
 	// light
 	XMVECTOR lightDir = -DirectX::XMVectorSet(
@@ -191,15 +159,15 @@ void GameApp::Update(float deltaT)
 	passConstant.Lights[0].FalloffEnd = 100.0;
 	passConstant.Lights[0].Position = { 0.0f, 10.0f, -10.0f };
 	passConstant.ambientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
-	XMStoreFloat3(&passConstant.eyePosW, eyePosition);
+
+	XMStoreFloat3(&passConstant.eyePosW, camera.GetPosition());
 
 	passConstant.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
 	passConstant.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
 
 	passConstant.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
 	passConstant.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
-	// update waves
-	UpdateWaves(deltaT);
+	
 }
 
 void GameApp::RenderScene(void)
@@ -802,6 +770,49 @@ void GameApp::LoadTextures()
 
 	Utility::Printf("Found %u textures\n", m_Textures.size());
 	
+}
+
+void GameApp::UpdateCamera(float deltaT)
+{
+	if (GameInput::IsPressed(GameInput::kMouse0) || GameInput::IsPressed(GameInput::kMouse1)) {
+		// Make each pixel correspond to a quarter of a degree.
+		float dx = m_xLast - GameInput::GetAnalogInput(GameInput::kAnalogMouseX);
+		float dy = m_yLast - GameInput::GetAnalogInput(GameInput::kAnalogMouseY);
+
+		if (GameInput::IsPressed(GameInput::kMouse0))
+		{
+			// Update angles based on input to orbit camera around box.
+			m_xRotate += (dx - m_xDiff);
+			m_yRotate += (dy - m_yDiff);
+			m_yRotate = (std::max)(-XM_PIDIV2 + 0.1f, m_yRotate);
+			m_yRotate = (std::min)(XM_PIDIV2 - 0.1f, m_yRotate);
+		}
+		else
+		{
+			m_radius += dx - dy - (m_xDiff - m_yDiff);
+		}
+
+		m_xDiff = dx;
+		m_yDiff = dy;
+
+		m_xLast += GameInput::GetAnalogInput(GameInput::kAnalogMouseX);
+		m_yLast += GameInput::GetAnalogInput(GameInput::kAnalogMouseY);
+	}
+	else
+	{
+		m_xDiff = 0.0f;
+		m_yDiff = 0.0f;
+		m_xLast = 0.0f;
+		m_yLast = 0.0f;
+	}
+
+	float x = m_radius * cosf(m_yRotate) * sinf(m_xRotate);
+	float y = m_radius * sinf(m_yRotate);
+	float z = -m_radius * cosf(m_yRotate) * cosf(m_xRotate);
+
+	camera.SetEyeAtUp({x,y,z}, Math::Vector3(Math::kZero), Math::Vector3(Math::kYUnitVector));
+	camera.SetAspectRatio(m_aspectRatio);
+	camera.Update();
 }
 
 void GameApp::UpdateWaves(float deltaT)

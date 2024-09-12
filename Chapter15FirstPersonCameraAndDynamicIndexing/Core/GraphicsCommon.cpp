@@ -54,6 +54,7 @@ namespace Graphics
 
     D3D12_DEPTH_STENCIL_DESC DepthStateDisabled;
     D3D12_DEPTH_STENCIL_DESC DepthStateReadWrite;
+    D3D12_DEPTH_STENCIL_DESC DepthStateReadWriteRZ;
     D3D12_DEPTH_STENCIL_DESC DepthStateReadOnly;
     D3D12_DEPTH_STENCIL_DESC DepthStateReadOnlyReversed;
     D3D12_DEPTH_STENCIL_DESC DepthStateTestEqual;
@@ -129,7 +130,7 @@ void Graphics::InitializeCommonState(void)
     RasterizerDefaultMsaa.MultisampleEnable = TRUE;
 
     RasterizerDefaultCCw = RasterizerDefault;
-    RasterizerDefaultCCw.FrontCounterClockwise = FALSE;
+    RasterizerDefaultCCw.FrontCounterClockwise = TRUE;
 
     RasterizerDefaultCwMsaa = RasterizerDefault;
     RasterizerDefaultCwMsaa.MultisampleEnable = TRUE;
@@ -167,9 +168,13 @@ void Graphics::InitializeCommonState(void)
     DepthStateReadWrite = DepthStateDisabled;
     DepthStateReadWrite.DepthEnable = TRUE;
     DepthStateReadWrite.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-    // ?
+    
     //DepthStateReadWrite.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
     DepthStateReadWrite.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+    
+    // reversed-Z
+    DepthStateReadWriteRZ = DepthStateReadWrite;
+    DepthStateReadWriteRZ.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
 
     DepthStateReadOnly = DepthStateReadWrite;
     DepthStateReadOnly.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;

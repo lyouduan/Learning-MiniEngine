@@ -9,6 +9,7 @@
 #include "d3dUtil.h"
 #include <memory>
 #include "TextureManager.h"
+#include "Camera.h"
 
 enum class RenderLayer : int
 {
@@ -71,6 +72,9 @@ private:
 
 	void BuildMaterials();
 	void LoadTextures();
+
+	void UpdateCamera(float deltaT);
+
 	RootSignature m_RootSignature;
 
 	std::unordered_map<std::string, GraphicsPSO> m_PSOs;
@@ -104,6 +108,9 @@ private:
 	DirectX::XMMATRIX m_Projection;
 
 	PassConstants passConstant;
+
+	// camera
+	Math::Camera camera;
 
 	float m_radius = 5.0f;
 	// x方向弧度

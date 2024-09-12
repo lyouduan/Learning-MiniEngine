@@ -5,7 +5,11 @@
 
 namespace Graphics
 {
-	DepthBuffer g_SceneDepthBuffer;
+	//DepthBuffer g_SceneDepthBuffer;
+	 
+	// reverse-z
+	// set the clear value as 0.0 on far plane, 1.0 is the near plane in DNC
+	DepthBuffer g_SceneDepthBuffer(0.0, 0);
 }
 
 #define T2X_COLOR_FORMAT DXGI_FORMAT_R10G10B10A2_UNORM
