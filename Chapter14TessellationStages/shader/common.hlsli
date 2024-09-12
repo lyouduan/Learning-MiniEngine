@@ -3,13 +3,6 @@
 
 #define MaxLights 16
 
-
-struct ObjConstants
-{
-    float4x4 gWorld;
-    float4x4 gTexTransform;
-};
-
 struct Light
 {
     float3 Strength;
@@ -20,45 +13,58 @@ struct Light
     float SpotPower;
 };
 
-struct PassConstants
+cbuffer objConstants : register(b0)
+{
+    float4x4 gWorld;
+    float4x4 gTexTransform;
+}
+cbuffer passConstants : register(b1)
 {
     float4x4 gViewProj;
-    float3 gEyePosW;
-    float pad0;
-    float4 gAmbientLight;
-    Light Lights[MaxLights];
-    float4 gFogColor;
-    float gFogStart;
-    float gFogRange;
-    float pad1;
-    float pad2;
-};
-
-struct MaterialConstants
+    float3   gEyePosW;
+    float    pad0;
+    float4   gAmbientLight;
+    Light    Lights[MaxLights];
+    float4   gFogColor;
+    float    gFogStart;
+    float    gFogRange;
+    float    pad1;
+    float    pad2;
+}
+cbuffer matConstants : register(b2)
 {
     float4x4 gMatTransform;
-    float4 gDiffuseAlbedo;
-    float3 gFresnelR0;
-    float gRoughness;
-};
-
-ConstantBuffer<ObjConstants> objConstants : register(b0);
-ConstantBuffer<PassConstants> passConstants : register(b1);
-ConstantBuffer<MaterialConstants> matConstants : register(b2);
+    float4   gDiffuseAlbedo;
+    float3   gFresnelR0;
+    float    gRoughness;
+}
 
 struct VertexIn
 {
-    float3 position : POSITION;
-    float3 normal : NORMAL;
-    float2 tex : TEXCOORD;
+    float3 posL : POSITION;
 };
 
 struct VertexOut
 {
-    float3 normal : NORMAL;
-    float3 positionW : POSITION;
-    float2 tex : TEXCOORD;
-    float4 positionH : SV_Position; // only omit at last one
+    float3 posL : POSITION;
 };
+
+struct PatchTess
+{
+    float EdgeTess[4] : SV_TessFactor;
+    float InsideTess[2] : SV_InsideTessFactor;
+};
+
+struct HullOut
+{
+    float3 PosL : POSITION;
+};
+
+struct DomainOut
+{
+    float4 PosH : SV_POSITION;
+};
+
+#define NUM_CONTROL_POINTS 4
 
 #endif // COMMON_HLSLI

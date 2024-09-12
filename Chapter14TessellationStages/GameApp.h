@@ -57,7 +57,6 @@ private:
 
 	void DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderItem*>& items);
 
-	void BuildLandRenderItems();
 	void BuildRenderItems();
 
 	void BuildLandGeometry();
@@ -85,7 +84,7 @@ private:
 
 	// List of all the render items.
 	std::vector<RenderItem*> m_LandRenders[(int)RenderLayer::Count];
-	std::vector<RenderItem*> m_Renders[(int)RenderLayer::Count];
+	std::vector<RenderItem*> m_QuadRenders[(int)RenderLayer::Count];
 	std::vector<std::unique_ptr<RenderItem>> m_AllRenders;
 
 	// materials

@@ -129,7 +129,7 @@ void Graphics::InitializeCommonState(void)
     RasterizerDefaultMsaa.MultisampleEnable = TRUE;
 
     RasterizerDefaultCCw = RasterizerDefault;
-    RasterizerDefaultCCw.FrontCounterClockwise = FALSE;
+    RasterizerDefaultCCw.FrontCounterClockwise = TRUE;
 
     RasterizerDefaultCwMsaa = RasterizerDefault;
     RasterizerDefaultCwMsaa.MultisampleEnable = TRUE;

@@ -268,13 +268,16 @@
     <None Include="Core\Math\Functions.inl">
       <Filter>Header Files</Filter>
     </None>
-    <None Include="shader\common.hlsli" />
+    <None Include="shader\CS.hlsli" />
     <None Include="shader\LightingUtil.hlsli" />
-    <None Include="shader\PixelShader.cso" />
-    <None Include="shader\VertexShader.cso" />
+    <None Include="shader\common.hlsli" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="shader\PS.hlsl" />
+    <FxCompile Include="shader\VS.hlsl" />
     <FxCompile Include="shader\VertexShader.hlsl" />
     <FxCompile Include="shader\PixelShader.hlsl" />
+    <FxCompile Include="shader\HullShader.hlsl" />
+    <FxCompile Include="shader\DomainShader.hlsl" />
   </ItemGroup>
 </Project>

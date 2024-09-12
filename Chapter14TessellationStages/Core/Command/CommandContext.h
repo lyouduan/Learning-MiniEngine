@@ -289,8 +289,8 @@ inline void GraphicsContext::DrawInstanced(UINT VertexCountPerInstance, UINT Ins
 	UINT StartVertexLocation, UINT StartInstanceLocation)
 {
 	FlushResourceBarriers();
-	//m_DynamicViewDescriptorHeap.CommitGraphicsRootDescriptorTables(m_CommandList);
-	//m_DynamicSamplerDescriptorHeap.CommitGraphicsRootDescriptorTables(m_CommandList);
+	m_DynamicViewDescriptorHeap.CommitGraphicsRootDescriptorTables(m_CommandList);
+	m_DynamicSamplerDescriptorHeap.CommitGraphicsRootDescriptorTables(m_CommandList);
 	m_CommandList->DrawInstanced(VertexCountPerInstance, InstanceCount, StartVertexLocation, StartInstanceLocation);
 }
 

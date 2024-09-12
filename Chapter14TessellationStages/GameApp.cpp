@@ -34,7 +34,7 @@ GameApp::GameApp(void)
 	 
 	m_aspectRatio = static_cast<float>(g_DisplayWidth) / static_cast<float>(g_DisplayHeight);
 
-	mWaves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
+	//mWaves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
 }
 
@@ -42,29 +42,18 @@ void GameApp::Startup(void)
 {
 	// prepare material
 	BuildMaterials();
-	// load Textures
-	LoadTextures();
 
 	// prepare shape and add material
-	//BuildLandGeometry();
-	//BuildWavesGeometry();
-	//BuildBoxGeometry();
-	//BuildBillboardGeometry();
 	BuildQuadPatchGeometry();
+	BuildBoxGeometry();
 
 	// build render items
-	//BuildLandRenderItems();
 	BuildRenderItems();
 
-
 	// initialize root signature
-	m_RootSignature.Reset(4, 0);
-	m_RootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
+	m_RootSignature.Reset(2, 0);
+	m_RootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL);
 	m_RootSignature[1].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_ALL);
-	m_RootSignature[2].InitAsConstantBuffer(2, D3D12_SHADER_VISIBILITY_ALL);
-	m_RootSignature[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, D3D12_SHADER_VISIBILITY_PIXEL);
-	// sampler
-	//m_RootSignature.InitStaticSampler(0, Graphics::SamplerLinearWrapDesc, D3D12_SHADER_VISIBILITY_PIXEL);
 
 	m_RootSignature.Finalize(L"root sinature", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 	
@@ -74,46 +63,63 @@ void GameApp::Startup(void)
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 
+	D3D12_INPUT_ELEMENT_DESC mInputLayout2[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+
 	DXGI_FORMAT ColorFormat = g_DisplayPlane[g_CurrentBuffer].GetFormat();
 	DXGI_FORMAT DepthFormat = g_SceneDepthBuffer.GetFormat();
 
 	// shader 
 	ComPtr<ID3DBlob> vertexBlob;
+	ComPtr<ID3DBlob> HSBlob;
+	ComPtr<ID3DBlob> DSBlob;
 	ComPtr<ID3DBlob> pixelBlob;
 	D3DReadFileToBlob(L"shader/VertexShader.cso", &vertexBlob);
+	D3DReadFileToBlob(L"shader/HullShader.cso", &HSBlob);
+	D3DReadFileToBlob(L"shader/DomainShader.cso", &DSBlob);
 	D3DReadFileToBlob(L"shader/PixelShader.cso", &pixelBlob);
+
+	ComPtr<ID3DBlob> vertexBlob2;
+	ComPtr<ID3DBlob> pixelBlob2;
+	D3DReadFileToBlob(L"shader/VS.cso", &vertexBlob2);
+	D3DReadFileToBlob(L"shader/PS.cso", &pixelBlob2);
 
 	// PSO
 	GraphicsPSO opaquePSO;
-
+	
 	auto rater = RasterizerDefault;
 	rater.FillMode = D3D12_FILL_MODE_WIREFRAME;
-
+	
 	opaquePSO.SetRootSignature(m_RootSignature);
 	opaquePSO.SetRasterizerState(rater);
 	opaquePSO.SetBlendState(BlendDisable);
 	opaquePSO.SetDepthStencilState(DepthStateReadWrite);
 	opaquePSO.SetInputLayout(_countof(mInputLayout), mInputLayout);
-	opaquePSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	opaquePSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH);
 	opaquePSO.SetRenderTargetFormat(ColorFormat, DepthFormat);
 	opaquePSO.SetVertexShader(vertexBlob);
+	opaquePSO.SetHullShader(HSBlob);
+	opaquePSO.SetDomainShader(DSBlob);
 	opaquePSO.SetPixelShader(pixelBlob);
 	opaquePSO.Finalize();
 	m_PSOs["opaque"] = opaquePSO;
 
-	//GraphicsPSO transpacrentPSO = opaquePSO;
-	//auto blend = Graphics::BlendTraditional;
-	//blend.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-	//transpacrentPSO.SetBlendState(blend);
-	//transpacrentPSO.Finalize();
-	//m_PSOs["transparent"] = transpacrentPSO;
-
-	//GraphicsPSO alphaTestedPSO = opaquePSO;
-	//auto rater = RasterizerDefault;
-	//rater.CullMode = D3D12_CULL_MODE_NONE; // not cull 
-	//alphaTestedPSO.SetRasterizerState(rater);
-	//alphaTestedPSO.Finalize();
-	//m_PSOs["alphaTested"] = alphaTestedPSO;
+	GraphicsPSO opaquePSO1;
+	opaquePSO1.SetRootSignature(m_RootSignature);
+	opaquePSO1.SetRasterizerState(rater);
+	opaquePSO1.SetBlendState(BlendDisable);
+	opaquePSO1.SetDepthStencilState(DepthStateReadWrite);
+	opaquePSO1.SetInputLayout(_countof(mInputLayout2), mInputLayout2);
+	opaquePSO1.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	opaquePSO1.SetRenderTargetFormat(ColorFormat, DepthFormat);
+	opaquePSO1.SetVertexShader(vertexBlob2);
+	opaquePSO1.SetPixelShader(pixelBlob2);
+	opaquePSO1.Finalize();
+	m_PSOs["opaque1"] = opaquePSO1;
 
 }
 
@@ -124,13 +130,10 @@ void GameApp::Cleanup(void)
 		iter->Geo->m_VertexBuffer.Destroy();
 		iter->Geo->m_IndexBuffer.Destroy();
 	}
-
-	m_Textures.clear();
 	m_Materials.clear();
 	m_Geometry.clear();
 	m_PSOs.clear();
 
-	delete m_WavesRitem;
 }
 
 void GameApp::Update(float deltaT)
@@ -179,7 +182,7 @@ void GameApp::Update(float deltaT)
 	const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1); // point
 	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
 	m_View = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
-	m_Projection = XMMatrixPerspectiveFovLH(0.25f * XM_PI, m_aspectRatio, 0.1f, 1000.0f);
+	m_Projection = XMMatrixPerspectiveFovLH(0.25f * XM_PI, m_aspectRatio, 1.0f, 1000.0f);
 
 	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(m_View * m_Projection)); // hlsl 列主序矩阵
 
@@ -201,8 +204,7 @@ void GameApp::Update(float deltaT)
 
 	passConstant.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
 	passConstant.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
-	// update waves
-	UpdateWaves(deltaT);
+	
 }
 
 void GameApp::RenderScene(void)
@@ -217,7 +219,7 @@ void GameApp::RenderScene(void)
 	// clear dsv
 	gfxContext.ClearDepthAndStencil(g_SceneDepthBuffer);
 	// clear rtv
-	g_DisplayPlane[g_CurrentBuffer].SetClearColor(Color(passConstant.fogColor.x, passConstant.fogColor.y, passConstant.fogColor.z, passConstant.fogColor.w));
+	g_DisplayPlane[g_CurrentBuffer].SetClearColor(Color(0.0f, 0.0f, 0.0f, 0.0f));
 
 	gfxContext.ClearColor(g_DisplayPlane[g_CurrentBuffer]);
 
@@ -225,7 +227,6 @@ void GameApp::RenderScene(void)
 	gfxContext.SetRenderTarget(g_DisplayPlane[g_CurrentBuffer].GetRTV(), g_SceneDepthBuffer.GetDSV());
 
 	//set root signature
-
 	gfxContext.SetRootSignature(m_RootSignature);
 
 	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
@@ -233,20 +234,15 @@ void GameApp::RenderScene(void)
 	// draw call
 	{
 		gfxContext.SetPipelineState(m_PSOs["opaque"]);
-		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::Opaque]);
-
-		gfxContext.SetPipelineState(m_PSOs["alphaTested"]);
-		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::AlphaTested]);
-
-		gfxContext.SetPipelineState(m_PSOs["billboard"]);
-		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::AlphaTestedBillboard]);
-
-		// transparent render pass at last 
-		gfxContext.SetPipelineState(m_PSOs["transparent"]);
-		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::Transparent]);
+		DrawRenderItems(gfxContext, m_QuadRenders[(int)RenderLayer::Opaque]);
 	}
 
-	
+	// draw call
+	{
+		gfxContext.SetPipelineState(m_PSOs["opaque1"]);
+		DrawRenderItems(gfxContext, m_QuadRenders[(int)RenderLayer::Transparent]);
+	}
+
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 
 	gfxContext.Finish();
@@ -255,7 +251,6 @@ void GameApp::RenderScene(void)
 void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderItem*>& items)
 {
 	ObjConstants objConstants;
-	MaterialConstants matCB;
 	for (auto& iter : items)
 	{
 		gfxContext.SetPrimitiveTopology(iter->PrimitiveType);
@@ -266,174 +261,64 @@ void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderIte
 		XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(iter->TexTransform)); // hlsl 列主序矩阵
 		gfxContext.SetDynamicConstantBufferView(0, sizeof(objConstants), &objConstants);
 
-		XMStoreFloat4x4(&matCB.MatTransform, XMMatrixTranspose(iter->Mat->MatTransform));
-		matCB.DiffuseAlbedo = iter->Mat->DiffuseAlbedo;
-		matCB.FresnelR0 = iter->Mat->FresnelR0;
-		matCB.Roughness = iter->Mat->Roughness;
-		// constants
-		gfxContext.SetDynamicConstantBufferView(2, sizeof(MaterialConstants), &matCB);
-
-		// srv
-		gfxContext.SetDynamicDescriptor(3, 0, iter->srv);
-
 		gfxContext.DrawIndexedInstanced(iter->IndexCount, 1, iter->StartIndexLocation, iter->BaseVertexLocation, 0);
+		//gfxContext.DrawIndexed(iter->IndexCount, iter->StartIndexLocation, iter->BaseVertexLocation);
 	}
-}
-
-void GameApp::BuildLandRenderItems()
-{
-	auto land = std::make_unique<RenderItem>();
-	land->World = XMMatrixIdentity() ;
-	land->TexTransform = XMMatrixScaling(5.0f, 5.0f, 1.0f);
-	land->Geo = m_Geometry["landGeo"].get();
-	land->Mat = m_Materials["grass"].get();
-	land->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	land->IndexCount = land->Geo->DrawArgs["land"].IndexCount;
-	land->BaseVertexLocation = land->Geo->DrawArgs["land"].BaseVertexLocation;
-	land->StartIndexLocation = land->Geo->DrawArgs["land"].StartIndexLocation;
-	land->srv = m_Textures["grass"].GetSRV();
-
-	m_LandRenders[(int)RenderLayer::Opaque].push_back(land.get());
-
-	auto wave = std::make_unique<RenderItem>();
-	wave->World = XMMatrixIdentity();
-	wave->TexTransform = XMMatrixScaling(4.0f, 4.0f, 1.0f);
-	wave->Geo = m_Geometry["waveGeo"].get();
-	wave->Mat = m_Materials["water"].get();
-	wave->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	wave->IndexCount = wave->Geo->DrawArgs["wave"].IndexCount;
-	wave->BaseVertexLocation = wave->Geo->DrawArgs["wave"].BaseVertexLocation;
-	wave->StartIndexLocation = wave->Geo->DrawArgs["wave"].StartIndexLocation;
-	wave->srv = m_Textures["water"].GetSRV();
-
-	m_WavesRitem = wave.get();
-	m_LandRenders[(int)RenderLayer::Transparent].push_back(wave.get());
-
-	auto box = std::make_unique<RenderItem>();
-	box->World = XMMatrixIdentity() * XMMatrixTranslation(3.0f, 2.0f, -9.0f);
-	box->Geo = m_Geometry["boxGeo"].get();
-	box->Mat = m_Materials["wirefence"].get();
-	box->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	box->IndexCount = box->Geo->DrawArgs["sbox"].IndexCount;
-	box->BaseVertexLocation = box->Geo->DrawArgs["sbox"].BaseVertexLocation;
-	box->StartIndexLocation = box->Geo->DrawArgs["sbox"].StartIndexLocation;
-	box->srv = m_Textures["wireFence"].GetSRV();
-
-	m_LandRenders[(int)RenderLayer::AlphaTested].push_back(box.get());
-
-	auto tree = std::make_unique<RenderItem>();
-	tree->World = XMMatrixIdentity();
-	tree->Geo = m_Geometry["treeGeo"].get();
-	tree->Mat = m_Materials["tree"].get();
-	tree->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-	tree->IndexCount = tree->Geo->DrawArgs["tree"].IndexCount;
-	tree->BaseVertexLocation = tree->Geo->DrawArgs["tree"].BaseVertexLocation;
-	tree->StartIndexLocation = tree->Geo->DrawArgs["tree"].StartIndexLocation;
-	tree->srv = m_Textures["tree"].GetSRV();
-
-	m_LandRenders[(int)RenderLayer::AlphaTestedBillboard].push_back(tree.get());
-
-	m_AllRenders.push_back(std::move(land));
-	m_AllRenders.push_back(std::move(wave));
-	m_AllRenders.push_back(std::move(box));
-	m_AllRenders.push_back(std::move(tree));
 }
 
 void GameApp::BuildRenderItems()
 {
 	auto quadPatchRitem = std::make_unique<RenderItem>();
-	quadPatchRitem->World = XMMatrixIdentity();
+	quadPatchRitem->World = XMMatrixIdentity() * XMMatrixTranslation(0.0, 0.0, 0.0);
 	quadPatchRitem->TexTransform = XMMatrixIdentity();
 	quadPatchRitem->Geo = m_Geometry["quadpatchGeo"].get();
-	quadPatchRitem->Mat = m_Materials["grass"].get();
 	quadPatchRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST;
 	quadPatchRitem->IndexCount = quadPatchRitem->Geo->DrawArgs["quadpatch"].IndexCount;
 	quadPatchRitem->BaseVertexLocation = quadPatchRitem->Geo->DrawArgs["quadpatch"].BaseVertexLocation;
 	quadPatchRitem->StartIndexLocation = quadPatchRitem->Geo->DrawArgs["quadpatch"].StartIndexLocation;
-
-	m_Renders[(int)RenderLayer::Opaque].push_back(quadPatchRitem.get());
+	m_QuadRenders[(int)RenderLayer::Opaque].push_back(quadPatchRitem.get());
 
 	m_AllRenders.push_back(std::move(quadPatchRitem));
+
+	auto testbox = std::make_unique<RenderItem>();
+	testbox->World = XMMatrixIdentity()*XMMatrixTranslation(0.0, 0.0, -20);
+	testbox->TexTransform = XMMatrixIdentity();
+	testbox->Geo = m_Geometry["boxGeo"].get();
+	testbox->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	testbox->IndexCount = testbox->Geo->DrawArgs["sbox"].IndexCount;
+	testbox->BaseVertexLocation = testbox->Geo->DrawArgs["sbox"].BaseVertexLocation;
+	testbox->StartIndexLocation = testbox->Geo->DrawArgs["sbox"].StartIndexLocation;
+	//m_QuadRenders[(int)RenderLayer::Transparent].push_back(box.get());
+
+	m_AllRenders.push_back(std::move(quadPatchRitem));
+	m_AllRenders.push_back(std::move(testbox));
 }
 
-void GameApp::BuildLandGeometry()
+void GameApp::BuildQuadPatchGeometry()
 {
-	GeometryGenerator geoGen;
-	GeometryGenerator::MeshData grid = geoGen.CreateGrid(160.0f, 160.0f, 50, 50);
-
-	//
-	// Extract the vertex elements we are interested and apply the height function to
-	// each vertex.  In addition, color the vertices based on their height so we have
-	// sandy looking beaches, grassy low hills, and snow mountain peaks.
-	//
-
-	std::vector<Vertex> vertices(grid.Vertices.size());
-	for (size_t i = 0; i < grid.Vertices.size(); ++i)
+	std::vector<XMFLOAT3> vertices =
 	{
-		auto& p = grid.Vertices[i].Position;
-		vertices[i].position = p;
-		vertices[i].position.y = GetHillsHeight(p.x, p.z);
-		vertices[i].normal = GetHillsNormal(p.x, p.z);
-		vertices[i].tex = grid.Vertices[i].TexC;
-	}
+		XMFLOAT3(-10.0f, 0.0f, +10.0f),
+		XMFLOAT3(+10.0f, 0.0f, +10.0f),
+		XMFLOAT3(-10.0f, 0.0f, -10.0f),
+		XMFLOAT3(+10.0f, 0.0f, -10.0f)
+	};
 
-	std::vector<std::uint16_t> indices = grid.GetIndices16();
-
-	const uint32_t vertexBufferSize = sizeof(Vertex);
-	const uint32_t indexBufferSize = sizeof(uint16_t);
-
+	std::vector<std::uint16_t> indices = { 0, 1, 2, 3 };
+	
 	auto geo = std::make_unique<MeshGeometry>();
-	geo->name = "landGeo";
-	geo->m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), vertexBufferSize, vertices.data());
-	geo->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), indexBufferSize, indices.data());
+	geo->name = "quadpatchGeo";
+	geo->m_VertexBuffer.Create(L"vertex buffer", (UINT)vertices.size(), sizeof(XMFLOAT3), vertices.data());
+	geo->m_IndexBuffer.Create(L"vertex buffer", (UINT)indices.size(), sizeof(std::uint16_t), indices.data());
 
 	SubmeshGeometry submesh;
 	submesh.IndexCount = (UINT)indices.size();
 	submesh.BaseVertexLocation = 0;
 	submesh.StartIndexLocation = 0;
-	geo->DrawArgs["land"] = std::move(submesh);
 
-	m_Geometry["landGeo"] = std::move(geo);
-}
+	geo->DrawArgs["quadpatch"] = std::move(submesh);
 
-void GameApp::BuildWavesGeometry()
-{
-	std::vector<std::uint16_t> indices(3 * mWaves->TriangleCount()); // 3 indices per face
-	assert(mWaves->VertexCount() < 0x0000ffff);
-
-	// Iterate over each quad.
-	int m = mWaves->RowCount();
-	int n = mWaves->ColumnCount();
-	int k = 0;
-	for (int i = 0; i < m - 1; ++i)
-	{
-		for (int j = 0; j < n - 1; ++j)
-		{
-			indices[k] = i * n + j;
-			indices[k + 1] = i * n + j + 1;
-			indices[k + 2] = (i + 1) * n + j;
-
-			indices[k + 3] = (i + 1) * n + j;
-			indices[k + 4] = i * n + j + 1;
-			indices[k + 5] = (i + 1) * n + j + 1;
-
-			k += 6; // next quad
-		}
-	}
-
-	UINT indexBufferSize = sizeof(std::uint16_t);
-
-	auto geo = std::make_unique<MeshGeometry>();
-	geo->name = "waveGeo";
-	geo->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), indexBufferSize, indices.data());
-
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.BaseVertexLocation = 0;
-	submesh.StartIndexLocation = 0;
-	geo->DrawArgs["wave"] = std::move(submesh);
-
-	m_Geometry["waveGeo"] = std::move(geo);
+	m_Geometry["quadpatchGeo"] = std::move(geo);
 }
 
 void GameApp::BuildBoxGeometry()
@@ -467,97 +352,6 @@ void GameApp::BuildBoxGeometry()
 	m_Geometry["boxGeo"] = std::move(geo);
 }
 
-void GameApp::BuildBillboardGeometry()
-{
-	struct TreeSpriteVertex
-	{
-		XMFLOAT3 Pos;
-		XMFLOAT2 Size;
-	};
-
-	static const int treeCount = 16;
-	std::array<TreeSpriteVertex, 16> vertices;
-	for (UINT i = 0; i < treeCount; ++i)
-	{
-		float x = Utility::RandF(-45.0f, 45.0f);
-		float z = Utility::RandF(-45.0f, 45.0f);
-		float y = GetHillsHeight(x, z);
-
-		// Move tree slightly above land height.
-		y += 8.0f;
-
-		vertices[i].Pos = XMFLOAT3(x, y, z);
-		vertices[i].Size = XMFLOAT2(20.0f, 20.0f);
-	}
-
-	std::array<std::uint16_t, 16> indices =
-	{
-		0, 1, 2, 3, 4, 5, 6, 7,
-		8, 9, 10, 11, 12, 13, 14, 15
-	};
-
-	auto geo = std::make_unique<MeshGeometry>();
-	geo->name = "treeGeo";
-
-	geo->m_VertexBuffer.Create(L"vertex buffer", (UINT)vertices.size(), sizeof(TreeSpriteVertex), vertices.data());
-	geo->m_IndexBuffer.Create(L"vertex buffer", (UINT)indices.size(), sizeof(uint16_t), indices.data());
-
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.StartIndexLocation = 0;
-	submesh.BaseVertexLocation = 0;
-
-	geo->DrawArgs["tree"] = submesh;
-
-	m_Geometry["treeGeo"] = std::move(geo);
-
-}
-
-void GameApp::BuildQuadPatchGeometry()
-{
-	std::array<XMFLOAT3, 4> vertices =
-	{
-		XMFLOAT3(-10.0f, 0.0f, +10.0f),
-		XMFLOAT3(+10.0f, 0.0f, +10.0f),
-		XMFLOAT3(-10.0f, 0.0f, -10.0f),
-		XMFLOAT3(+10.0f, 0.0f, -10.0f)
-	};
-
-	std::array<std::int16_t, 4> indices = { 0, 1, 2, 3 };
-
-	auto geo = std::make_unique<MeshGeometry>();
-	geo->name = "quadpatchGeo";
-	geo->m_VertexBuffer.Create(L"vertex buffer", (UINT)vertices.size(), sizeof(XMFLOAT3), vertices.data());
-	geo->m_IndexBuffer.Create(L"index buffer", (UINT)indices.size(), sizeof(std::int16_t), indices.data());
-
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.BaseVertexLocation = 0;
-	submesh.StartIndexLocation = 0;
-
-	geo->DrawArgs["quadpatch"];
-
-	m_Geometry["quadpatchGeo"] = std::move(geo);
-}
-
-float GameApp::GetHillsHeight(float x, float z) const
-{
-	return 0.3f * (z * sinf(0.1f * x) + x * cosf(0.1f * z));
-}
-
-XMFLOAT3 GameApp::GetHillsNormal(float x, float z) const
-{
-	// n = (-df/dx, 1, -df/dz)
-	XMFLOAT3 n(
-		-0.03f * z * cosf(0.1f * x) - 0.3f * cosf(0.1f * z),
-		1.0f,
-		-0.3f * sinf(0.1f * x) + 0.03f * x * sinf(0.1f * z));
-
-	XMVECTOR unitNormal = XMVector3Normalize(XMLoadFloat3(&n));
-	XMStoreFloat3(&n, unitNormal);
-
-	return n;
-}
 
 void GameApp::BuildMaterials()
 {
@@ -672,59 +466,3 @@ void GameApp::LoadTextures()
 	Utility::Printf("Found %u textures\n", m_Textures.size());
 	
 }
-
-void GameApp::UpdateWaves(float deltaT)
-{
-	// Every quarter second, generate a random wave.
-	static float t_base = 0.0f;
-
-	t_base += deltaT;
-
-	if (t_base >= 0.25f)
-	{
-		t_base -= 0.25f;
-
-		int i = Utility::Rand(4, mWaves->RowCount() - 5);
-		int j = Utility::Rand(4, mWaves->ColumnCount() - 5);
-
-		float r = Utility::RandF(0.2f, 0.5f);
-
-		mWaves->Disturb(i, j, r);
-	}
-
-
-	// Update the wave simulation.
-	mWaves->Update(deltaT);
-
-	// Update the wave vertex buffer with the new solution.
-	m_VerticesWaves.clear();
-	for (int i = 0; i < mWaves->VertexCount(); ++i)
-	{
-		Vertex v;
-
-		v.position = mWaves->Position(i);
-		v.normal = mWaves->Normal(i);
-
-		v.tex.x = 0.5f + v.position.x / mWaves->Width();
-		v.tex.y = 0.5f - v.position.z / mWaves->Depth();
-
-		m_VerticesWaves.push_back(v);
-	}
-	AnimateMaterials(deltaT);
-
-	m_Geometry["waveGeo"]->m_VertexBuffer.Create(L"vertex buffer", m_VerticesWaves.size(), sizeof(Vertex), m_VerticesWaves.data());
-}
-
-void GameApp::AnimateMaterials(float deltaT)
-{
-	XMFLOAT4X4 matTrans;
-	XMStoreFloat4x4(&matTrans, m_WavesRitem->Mat->MatTransform);
-	float& tu = matTrans(3, 0);
-	float& tv = matTrans(3, 1);
-
-	tu += 0.01f * deltaT;
-	tv += 0.002f * deltaT;
-	
-	m_WavesRitem->Mat->MatTransform = XMLoadFloat4x4(&matTrans);
-}
-
