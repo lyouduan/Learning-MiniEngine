@@ -59,11 +59,9 @@ private:
 
 	void BuildRenderItems();
 
-	void BuildLandGeometry();
-	void BuildWavesGeometry();
 	void BuildBoxGeometry();
-	void BuildBillboardGeometry();
 	void BuildQuadPatchGeometry();
+	void BuildBezierPatchGeometry();
 
 	float GetHillsHeight(float x, float z)const;
 	DirectX::XMFLOAT3 GetHillsNormal(float x, float z)const;
@@ -83,9 +81,11 @@ private:
 	std::vector<Vertex> m_VerticesWaves;
 
 	// List of all the render items.
-	std::vector<RenderItem*> m_LandRenders[(int)RenderLayer::Count];
+	std::vector<RenderItem*> m_BezierRenders[(int)RenderLayer::Count];
 	std::vector<RenderItem*> m_QuadRenders[(int)RenderLayer::Count];
 	std::vector<std::unique_ptr<RenderItem>> m_AllRenders;
+
+	bool m_bBezierShapes;
 
 	// materials
 	std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;

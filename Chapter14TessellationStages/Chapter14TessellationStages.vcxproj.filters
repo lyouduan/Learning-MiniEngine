@@ -279,5 +279,7 @@
     <FxCompile Include="shader\PixelShader.hlsl" />
     <FxCompile Include="shader\HullShader.hlsl" />
     <FxCompile Include="shader\DomainShader.hlsl" />
+    <FxCompile Include="shader\HS.hlsl" />
+    <FxCompile Include="shader\DS.hlsl" />
   </ItemGroup>
 </Project>

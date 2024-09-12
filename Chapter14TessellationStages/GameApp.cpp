@@ -46,6 +46,7 @@ void GameApp::Startup(void)
 	// prepare shape and add material
 	BuildQuadPatchGeometry();
 	BuildBoxGeometry();
+	BuildBezierPatchGeometry();
 
 	// build render items
 	BuildRenderItems();
@@ -83,10 +84,10 @@ void GameApp::Startup(void)
 	D3DReadFileToBlob(L"shader/DomainShader.cso", &DSBlob);
 	D3DReadFileToBlob(L"shader/PixelShader.cso", &pixelBlob);
 
-	ComPtr<ID3DBlob> vertexBlob2;
-	ComPtr<ID3DBlob> pixelBlob2;
-	D3DReadFileToBlob(L"shader/VS.cso", &vertexBlob2);
-	D3DReadFileToBlob(L"shader/PS.cso", &pixelBlob2);
+	ComPtr<ID3DBlob> HSBlob2;
+	ComPtr<ID3DBlob> DSBlob2;
+	D3DReadFileToBlob(L"shader/HS.cso", &HSBlob2);
+	D3DReadFileToBlob(L"shader/DS.cso", &DSBlob2);
 
 	// PSO
 	GraphicsPSO opaquePSO;
@@ -108,18 +109,20 @@ void GameApp::Startup(void)
 	opaquePSO.Finalize();
 	m_PSOs["opaque"] = opaquePSO;
 
-	GraphicsPSO opaquePSO1;
-	opaquePSO1.SetRootSignature(m_RootSignature);
-	opaquePSO1.SetRasterizerState(rater);
-	opaquePSO1.SetBlendState(BlendDisable);
-	opaquePSO1.SetDepthStencilState(DepthStateReadWrite);
-	opaquePSO1.SetInputLayout(_countof(mInputLayout2), mInputLayout2);
-	opaquePSO1.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-	opaquePSO1.SetRenderTargetFormat(ColorFormat, DepthFormat);
-	opaquePSO1.SetVertexShader(vertexBlob2);
-	opaquePSO1.SetPixelShader(pixelBlob2);
-	opaquePSO1.Finalize();
-	m_PSOs["opaque1"] = opaquePSO1;
+	GraphicsPSO bezierPSO;
+	bezierPSO.SetRootSignature(m_RootSignature);
+	bezierPSO.SetRasterizerState(rater);
+	bezierPSO.SetBlendState(BlendDisable);
+	bezierPSO.SetDepthStencilState(DepthStateReadWrite);
+	bezierPSO.SetInputLayout(_countof(mInputLayout), mInputLayout);
+	bezierPSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH);
+	bezierPSO.SetRenderTargetFormat(ColorFormat, DepthFormat);
+	bezierPSO.SetVertexShader(vertexBlob);
+	bezierPSO.SetHullShader(HSBlob2);
+	bezierPSO.SetDomainShader(DSBlob2);
+	bezierPSO.SetPixelShader(pixelBlob);
+	bezierPSO.Finalize();
+	m_PSOs["bezier"] = bezierPSO;
 
 }
 
@@ -138,8 +141,8 @@ void GameApp::Cleanup(void)
 
 void GameApp::Update(float deltaT)
 {
-	//if (GameInput::IsFirstPressed(GameInput::kKey_f1))
-		//m_bRenderShapes = !m_bRenderShapes;
+	if (GameInput::IsFirstPressed(GameInput::kKey_f1))
+		m_bBezierShapes = !m_bBezierShapes;
 
 	if (GameInput::IsPressed(GameInput::kMouse0) || GameInput::IsPressed(GameInput::kMouse1)) {
 		// Make each pixel correspond to a quarter of a degree.
@@ -232,15 +235,15 @@ void GameApp::RenderScene(void)
 	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
 	// draw call
+	if(m_bBezierShapes)
 	{
 		gfxContext.SetPipelineState(m_PSOs["opaque"]);
 		DrawRenderItems(gfxContext, m_QuadRenders[(int)RenderLayer::Opaque]);
 	}
-
-	// draw call
+	else 
 	{
-		gfxContext.SetPipelineState(m_PSOs["opaque1"]);
-		DrawRenderItems(gfxContext, m_QuadRenders[(int)RenderLayer::Transparent]);
+		gfxContext.SetPipelineState(m_PSOs["bezier"]);
+		DrawRenderItems(gfxContext, m_BezierRenders[(int)RenderLayer::Opaque]);
 	}
 
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
@@ -288,10 +291,20 @@ void GameApp::BuildRenderItems()
 	testbox->IndexCount = testbox->Geo->DrawArgs["sbox"].IndexCount;
 	testbox->BaseVertexLocation = testbox->Geo->DrawArgs["sbox"].BaseVertexLocation;
 	testbox->StartIndexLocation = testbox->Geo->DrawArgs["sbox"].StartIndexLocation;
-	//m_QuadRenders[(int)RenderLayer::Transparent].push_back(box.get());
+
+	auto bezier = std::make_unique<RenderItem>();
+	bezier->World = XMMatrixIdentity() * XMMatrixTranslation(0.0, 0.0, -20);
+	bezier->TexTransform = XMMatrixIdentity();
+	bezier->Geo = m_Geometry["bezierPatchGeo"].get();
+	bezier->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST; // 16 control points
+	bezier->IndexCount = bezier->Geo->DrawArgs["bezierPatch"].IndexCount;
+	bezier->BaseVertexLocation = bezier->Geo->DrawArgs["bezierPatch"].BaseVertexLocation;
+	bezier->StartIndexLocation = bezier->Geo->DrawArgs["bezierPatch"].StartIndexLocation;
+	m_BezierRenders[(int)RenderLayer::Opaque].push_back(bezier.get());
 
 	m_AllRenders.push_back(std::move(quadPatchRitem));
 	m_AllRenders.push_back(std::move(testbox));
+	m_AllRenders.push_back(std::move(bezier));
 }
 
 void GameApp::BuildQuadPatchGeometry()
@@ -319,6 +332,60 @@ void GameApp::BuildQuadPatchGeometry()
 	geo->DrawArgs["quadpatch"] = std::move(submesh);
 
 	m_Geometry["quadpatchGeo"] = std::move(geo);
+}
+
+void GameApp::BuildBezierPatchGeometry()
+{
+	std::vector<XMFLOAT3> vertices =
+	{
+		// Row 0
+		XMFLOAT3(-10.0f, -10.0f, +15.0f),
+		XMFLOAT3(-5.0f,  0.0f, +15.0f),
+		XMFLOAT3(+5.0f,  0.0f, +15.0f),
+		XMFLOAT3(+10.0f, 0.0f, +15.0f),
+
+		// Row 1
+		XMFLOAT3(-15.0f, 0.0f, +5.0f),
+		XMFLOAT3(-5.0f,  0.0f, +5.0f),
+		XMFLOAT3(+5.0f,  20.0f, +5.0f),
+		XMFLOAT3(+15.0f, 0.0f, +5.0f),
+
+		// Row 2
+		XMFLOAT3(-15.0f, 0.0f, -5.0f),
+		XMFLOAT3(-5.0f,  0.0f, -5.0f),
+		XMFLOAT3(+5.0f,  0.0f, -5.0f),
+		XMFLOAT3(+15.0f, 0.0f, -5.0f),
+
+		// Row 3
+		XMFLOAT3(-10.0f, 10.0f, -15.0f),
+		XMFLOAT3(-5.0f,  0.0f, -15.0f),
+		XMFLOAT3(+5.0f,  0.0f, -15.0f),
+		XMFLOAT3(+25.0f, 10.0f, -15.0f)
+	};
+
+	std::vector<std::uint16_t> indices =
+	{
+		0, 1, 2, 3,
+		4, 5, 6, 7,
+		8, 9, 10, 11,
+		12, 13, 14, 15
+	};
+
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->name = "bezierPatchGeo";
+
+	geo->m_VertexBuffer.Create(L"bezier vertex buffer", (UINT)vertices.size(), sizeof(XMFLOAT3), vertices.data());
+	geo->m_IndexBuffer.Create(L"bezier index buffer", (UINT)indices.size(), sizeof(std::uint16_t), indices.data());
+
+
+	SubmeshGeometry submesh;
+	submesh.IndexCount = (UINT)indices.size();
+	submesh.StartIndexLocation = 0;
+	submesh.BaseVertexLocation = 0;
+
+	geo->DrawArgs["bezierPatch"] = std::move(submesh);
+
+	m_Geometry["bezierPatchGeo"] = std::move(geo);
 }
 
 void GameApp::BuildBoxGeometry()
