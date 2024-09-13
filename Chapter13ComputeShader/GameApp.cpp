@@ -297,7 +297,7 @@ void GameApp::RenderScene(void)
 	// 完成之前的绘制
 	gfxContext.Flush(true);
 
-	blurFilter.Execute(g_DisplayPlane[g_CurrentBuffer], 5);
+	blurFilter.Execute(g_DisplayPlane[g_CurrentBuffer], 1);
 	gfxContext.CopyBuffer(g_DisplayPlane[g_CurrentBuffer], blurFilter.GetBlurMap());
 
 	// 完成之前的绘制
@@ -305,7 +305,7 @@ void GameApp::RenderScene(void)
 
 	sobelFilter.Execute(g_DisplayPlane[g_CurrentBuffer]);
 
-	gfxContext.CopyBuffer(g_DisplayPlane[g_CurrentBuffer], sobelFilter.GetAddResult());
+	gfxContext.CopyBuffer(g_DisplayPlane[g_CurrentBuffer], sobelFilter.GetSobelResult());
 
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 
@@ -587,7 +587,7 @@ void GameApp::BuildMaterials()
 	// tools we need (transparency, environment reflection), so we fake it for now.
 	auto water = std::make_unique<Material>();
 	water->Name = "water";
-	water->DiffuseAlbedo = XMFLOAT4(1.0, 1.0, 1.0, 0.2f);
+	water->DiffuseAlbedo = XMFLOAT4(1.0, 1.0, 1.0, 0.5f);
 	water->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
 	water->Roughness = 0.0f;
 

@@ -46,7 +46,7 @@ public:
         m_RootParam.Descriptor.RegisterSpace = Space;
     }
 
-    // SRV
+    // SRV Buffer
     void InitAsBufferSRV(UINT Register, D3D12_SHADER_VISIBILITY Visibility =
         D3D12_SHADER_VISIBILITY_ALL, UINT Space = 0)
     {

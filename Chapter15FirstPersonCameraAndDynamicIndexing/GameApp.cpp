@@ -219,7 +219,7 @@ void GameApp::RenderScene(void)
 		gfxContext.SetPipelineState(m_PSOs["alphaTested"]);
 		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::AlphaTested]);
 	}
-	
+	 
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 
 	gfxContext.Finish();
@@ -749,7 +749,7 @@ void GameApp::BuildMaterials()
 
 void GameApp::LoadTextures()
 {
-	TextureManager::Initialize(L"textures/");
+	TextureManager::Initialize(L"../textures/");
 
 	TextureRef grassTex = TextureManager::LoadDDSFromFile(L"grass.dds");
 	if(grassTex.IsValid())

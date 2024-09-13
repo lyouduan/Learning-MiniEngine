@@ -8,8 +8,8 @@ SamplerState gsamLinearClamp : register(s0);
 float4 main(VertexOut input) : SV_TARGET
 {
     float4 diffuseAlbedo = gDiffuseMap.Sample(gsamLinearClamp, input.tex) * matConstants.gDiffuseAlbedo;
-    // alpha tested
-    //clip(diffuseAlbedo.a - 0.1f);
+// alpha tested
+    clip(diffuseAlbedo.a - 0.1f);
     
     input.normal = normalize(input.normal);
     
@@ -30,8 +30,8 @@ float4 main(VertexOut input) : SV_TARGET
     float4 litColor = ambient + directLight;
     
     // fog
-    //float fogAmount = saturate((distance - passConstants.gFogStart) / passConstants.gFogRange);
-    //litColor = lerp(litColor, passConstants.gFogColor, fogAmount);
+    float fogAmount = saturate((distance - passConstants.gFogStart) / passConstants.gFogRange);
+    litColor = lerp(litColor, passConstants.gFogColor, fogAmount);
     
     litColor.a = diffuseAlbedo.a;
     

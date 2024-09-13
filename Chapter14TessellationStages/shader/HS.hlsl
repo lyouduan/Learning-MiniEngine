@@ -18,7 +18,7 @@ PatchTess CalcHSPatchConstants(
 }
 
 [domain("quad")]
-[partitioning("integer")]
+[partitioning("fractional_odd")]
 [outputtopology("triangle_cw")]
 [outputcontrolpoints(16)]
 [patchconstantfunc("CalcHSPatchConstants")]

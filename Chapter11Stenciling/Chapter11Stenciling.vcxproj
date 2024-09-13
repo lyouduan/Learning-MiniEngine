@@ -191,6 +191,7 @@
     </Link>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -213,6 +214,7 @@
     </Link>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -231,6 +233,7 @@
     </Link>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -253,6 +256,7 @@
     </Link>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
+      <ObjectFileOutput>$(ProjectDir)shader\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
