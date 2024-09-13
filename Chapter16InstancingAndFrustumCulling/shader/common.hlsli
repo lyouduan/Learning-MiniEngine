@@ -4,15 +4,15 @@
 #define MaxLights 16
 
 
-struct ObjConstants
+struct InstanceData
 {
     float4x4 gWorld;
     float4x4 gTexTransform;
     float4x4 gMatTransform;
     uint gMaterialIndex;
-    uint gObjPad1;
-    uint gObjPad2;
-    uint gObjPad3;
+    uint InsPad1;
+    uint InsPad2;
+    uint InsPad3;
 };
 
 struct Light
@@ -51,21 +51,22 @@ struct MaterialData
     uint MatPad3;
 };
 
-ConstantBuffer<ObjConstants> objConstants : register(b0);
-ConstantBuffer<PassConstants> passConstants : register(b1);
-
-
 Texture2D gDiffuseMap[7] : register(t0);
+
 // structured buffer
-StructuredBuffer<MaterialData> gMaterialData : register(t0, space1);
+StructuredBuffer<InstanceData> gInstanceData : register(t0, space1);
+StructuredBuffer<MaterialData> gMaterialData : register(t1, space1);
 
 SamplerState gsamLinearClamp : register(s0);
+
+ConstantBuffer<PassConstants> passConstants : register(b0);
 
 struct VertexIn
 {
     float3 position : POSITION;
     float3 normal : NORMAL;
     float2 tex : TEXCOORD;
+
 };
 
 struct VertexOut
@@ -74,6 +75,8 @@ struct VertexOut
     float3 positionW : POSITION;
     float2 tex : TEXCOORD;
     float4 positionH : SV_Position; // only omit at last one
+    
+    nointerpolation uint MatIndex : MATINDEX;
 };
 
 #endif // COMMON_HLSLI

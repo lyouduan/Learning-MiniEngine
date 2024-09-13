@@ -29,6 +29,8 @@ struct RenderItem
 
 	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
+	std::vector<Instances> inst;
+
 	MeshGeometry* Geo = nullptr;
 
 	Material* Mat = nullptr;
@@ -37,6 +39,7 @@ struct RenderItem
 	UINT ObjCBIndex = -1; 
 
 	UINT IndexCount = 0;
+	UINT InstanceCount = 0;
 	UINT StartIndexLocation = 0;
 	UINT BaseVertexLocation = 0;
 
@@ -58,24 +61,16 @@ public:
 
 private:
 
-	void DrawRenderItems(GraphicsContext& gfxContext, std::vector<std::unique_ptr<RenderItem>>& items);
+	void DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderItem*>& items);
 
-	void BuildLandRenderItems();
-	void BuildShapeRenderItems();
-	void BuildLandGeometry();
-	void BuildWavesGeometry();
-	void BuildShapeGeometry();
-	void BuildBoxGeometry();
+	void BuildRenderItems();
+
 	void BuildSkullGeometry();
-
-	float GetHillsHeight(float x, float z)const;
-	DirectX::XMFLOAT3 GetHillsNormal(float x, float z)const;
-	void UpdateWaves(float deltaT);
-	void AnimateMaterials(float deltaT);
 
 	void BuildMaterials();
 	void LoadTextures();
 
+	void UpdateInstanceIndex(float deltaT);
 	void UpdateCamera(float deltaT);
 
 	RootSignature m_RootSignature;
@@ -85,15 +80,10 @@ private:
 	// switch render scene
 	bool m_bRenderShapes = true;
 
-	// waves
-	std::unique_ptr<Waves> mWaves;
-	RenderItem* m_WavesRitem;
-	std::vector<Vertex> m_VerticesWaves;
-
 	// List of all the render items.
-	std::vector < std::unique_ptr<RenderItem>> m_ShapeRenders;
+	std::vector < std::unique_ptr<RenderItem>> m_AllRenders;
 	//std::vector < std::unique_ptr<RenderItem>> m_LandRenders;
-	std::vector<std::unique_ptr<RenderItem>> m_LandRenders[(int)RenderLayer::Count];
+	std::vector<RenderItem*> m_LayerRenders[(int)RenderLayer::Count];
 
 	// materials
 	std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
@@ -113,6 +103,7 @@ private:
 
 	PassConstants passConstant;
 	StructuredBuffer matBuffer;
+	StructuredBuffer InstBuffer;
 
 	// camera
 	Math::Camera camera;

@@ -4,7 +4,8 @@
 
 float4 main(VertexOut input) : SV_TARGET
 {
-    MaterialData matData = gMaterialData[objConstants.gMaterialIndex];
+    MaterialData matData = gMaterialData[input.MatIndex];
+    
     float4 diffuseAlbedo = matData.gDiffuseAlbedo;
     float3 fresnelR0 = matData.gFresnelR0;
     float roughness = matData.gRoughness;

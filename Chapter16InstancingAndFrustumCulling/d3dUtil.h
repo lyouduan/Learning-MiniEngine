@@ -90,3 +90,14 @@ __declspec(align(16)) struct PassConstants
 	float pad1;
 	float pad2;
 };
+
+__declspec(align(16)) struct Instances
+{
+	DirectX::XMFLOAT4X4 World;
+	DirectX::XMFLOAT4X4 TexTransform;
+	DirectX::XMFLOAT4X4 MatTransform;
+	UINT MaterialIndex;
+	UINT InsPad1;
+	UINT InsPad2;
+	UINT InsPad3;
+};

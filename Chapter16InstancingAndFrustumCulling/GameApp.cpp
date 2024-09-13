@@ -32,9 +32,6 @@ GameApp::GameApp(void)
 	m_Viewport.MaxDepth = 1.0f;
 	 
 	m_aspectRatio = static_cast<float>(g_DisplayHeight) / static_cast<float>(g_DisplayWidth);
-
-	mWaves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
-
 }
 
 void GameApp::Startup(void)
@@ -45,21 +42,16 @@ void GameApp::Startup(void)
 	LoadTextures();
 
 	// prepare shape and add material
-	BuildLandGeometry();
-	BuildWavesGeometry();
-	BuildShapeGeometry();
-	BuildBoxGeometry();
 	BuildSkullGeometry();
 
 	// build render items
-	BuildLandRenderItems();
-	BuildShapeRenderItems();
+	BuildRenderItems();
 
 	// initialize root signature
 	m_RootSignature.Reset(4, 1);
 	m_RootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL);
-	m_RootSignature[1].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_ALL);
-	m_RootSignature[2].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_ALL, 1);
+	m_RootSignature[1].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_ALL, 1);
+	m_RootSignature[2].InitAsBufferSRV(1, D3D12_SHADER_VISIBILITY_ALL, 1);
 	m_RootSignature[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, m_srvs.size());
 	// sampler
 	m_RootSignature.InitStaticSampler(0, Graphics::SamplerLinearWrapDesc, D3D12_SHADER_VISIBILITY_PIXEL);
@@ -115,18 +107,10 @@ void GameApp::Startup(void)
 
 void GameApp::Cleanup(void)
 {
-	for (auto& iter : m_ShapeRenders)
+	for (auto& iter : m_AllRenders)
 	{
 		iter->Geo->m_VertexBuffer.Destroy();
 		iter->Geo->m_IndexBuffer.Destroy();
-	}
-	for (int i = 0; (int)RenderLayer::Count; ++i)
-	{
-		for (auto& iter : m_LandRenders[i])
-		{
-			iter->Geo->m_VertexBuffer.Destroy();
-			iter->Geo->m_IndexBuffer.Destroy();
-		}
 	}
 
 	m_Materials.clear();
@@ -138,13 +122,11 @@ void GameApp::Update(float deltaT)
 {
 	// update camera 
 	UpdateCamera(deltaT);
-	// update waves
-	UpdateWaves(deltaT);
-
+	// update Instance
+	UpdateInstanceIndex(deltaT);
 
 	if (GameInput::IsFirstPressed(GameInput::kKey_f1))
 		m_bRenderShapes = !m_bRenderShapes;
-
 	
 	m_View = camera.GetViewMatrix();
 	m_Projection = camera.GetProjMatrix();
@@ -194,30 +176,18 @@ void GameApp::RenderScene(void)
 
 	gfxContext.SetRootSignature(m_RootSignature);
 
-	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
+	gfxContext.SetDynamicConstantBufferView(0, sizeof(passConstant), &passConstant);
 
 	// structured buffer
+	gfxContext.SetBufferSRV(1, InstBuffer);
 	gfxContext.SetBufferSRV(2, matBuffer);
 
 	// srv tables
 	gfxContext.SetDynamicDescriptors(3, 0, m_srvs.size(), &m_srvs[0]);
 
-	// draw call
-	if (m_bRenderShapes)
 	{
 		gfxContext.SetPipelineState(m_PSOs["opaque"]);
-		DrawRenderItems(gfxContext, m_ShapeRenders);
-	}
-	else
-	{
-		gfxContext.SetPipelineState(m_PSOs["opaque"]);
-		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::Opaque]);
-
-		gfxContext.SetPipelineState(m_PSOs["transparent"]);
-		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::Transparent]);
-
-		gfxContext.SetPipelineState(m_PSOs["alphaTested"]);
-		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::AlphaTested]);
+		DrawRenderItems(gfxContext, m_LayerRenders[(int)RenderLayer::Opaque]);
 	}
 	
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
@@ -225,372 +195,70 @@ void GameApp::RenderScene(void)
 	gfxContext.Finish();
 }
 
-void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<std::unique_ptr<RenderItem>>& items)
+void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderItem*>& items)
 {
-	ObjConstants objConstants;
 	for (auto& iter : items)
 	{
 		gfxContext.SetPrimitiveTopology(iter->PrimitiveType);
 		gfxContext.SetVertexBuffer(0, iter->Geo->m_VertexBuffer.VertexBufferView());
 		gfxContext.SetIndexBuffer(iter->Geo->m_IndexBuffer.IndexBufferView());
 
-		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(iter->World)); // hlsl 列主序矩阵
-		XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(iter->TexTransform)); // hlsl 列主序矩阵
-		XMStoreFloat4x4(&objConstants.MatTransform, XMMatrixTranspose(iter->MatTransform)); // hlsl 列主序矩阵
-		objConstants.MaterialIndex = iter->ObjCBIndex;
-
-		gfxContext.SetDynamicConstantBufferView(0, sizeof(objConstants), &objConstants);
-
-		gfxContext.DrawIndexedInstanced(iter->IndexCount, 1, iter->StartIndexLocation, iter->BaseVertexLocation, 0);
+		gfxContext.DrawIndexedInstanced(iter->IndexCount, iter->InstanceCount, iter->StartIndexLocation, iter->BaseVertexLocation, 0);
 	}
 }
 
-void GameApp::BuildShapeRenderItems()
+void GameApp::BuildRenderItems()
 {
-	auto boxRitem = std::make_unique<RenderItem>();
-	boxRitem->World = XMMatrixIdentity() * XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f);
-	boxRitem->TexTransform = XMMatrixScaling(1.0f, 1.0f, 1.0f);
-	boxRitem->ObjCBIndex = 3;
-	boxRitem->Mat = m_Materials["bricks0"].get();
-	boxRitem->Geo = m_Geometry["shapeGeo"].get();
-	boxRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	boxRitem->IndexCount = boxRitem->Geo->DrawArgs["box"].IndexCount;
-	boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs["box"].StartIndexLocation;
-	boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation;
-	m_ShapeRenders.push_back(std::move(boxRitem));
-
-	auto gridRitem = std::make_unique<RenderItem>();
-	gridRitem->World = XMMatrixIdentity();
-	gridRitem->TexTransform = XMMatrixScaling(8.0f, 8.0f, 1.0f);
-	gridRitem->ObjCBIndex = 2;
-	gridRitem->Mat = m_Materials["tile0"].get();
-	gridRitem->Geo = m_Geometry["shapeGeo"].get();
-	gridRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
-	gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
-	gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
-	m_ShapeRenders.push_back(std::move(gridRitem));
-
 	auto skullRitem = std::make_unique<RenderItem>();
 	skullRitem->World = XMMatrixIdentity() * XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f);
-	skullRitem->ObjCBIndex = 6;
+	skullRitem->ObjCBIndex = 0;
 	skullRitem->Mat = m_Materials["skullMat"].get();
 	skullRitem->Geo = m_Geometry["skullGeo"].get();
 	skullRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	skullRitem->IndexCount = skullRitem->Geo->DrawArgs["skull"].IndexCount;
+	skullRitem->InstanceCount = 0;
 	skullRitem->StartIndexLocation = skullRitem->Geo->DrawArgs["skull"].StartIndexLocation;
 	skullRitem->BaseVertexLocation = skullRitem->Geo->DrawArgs["skull"].BaseVertexLocation;
-	m_ShapeRenders.push_back(std::move(skullRitem));
 
-	XMMATRIX brickTexTransform = XMMatrixScaling(1.0f, 1.0f, 1.0f);
-	for (int i = 0; i < 5; ++i)
+	const int n = 5;
+
+	skullRitem->inst.resize(n*n*n);
+	skullRitem->InstanceCount = 5 * 5 * 5;
+
+	float width = 200.0f;
+	float height = 200.0f;
+	float depth = 200.0f;
+
+	float x = -0.5f * width;
+	float y = -0.5f * height;
+	float z = -0.5f * depth;
+	float dx = width / (n - 1);
+	float dy = height / (n - 1);
+	float dz = depth / (n - 1);
+	for (int k = 0; k < n; ++k)
 	{
-		auto leftCylRitem = std::make_unique<RenderItem>();
-		auto rightCylRitem = std::make_unique<RenderItem>();
-		auto leftSphereRitem = std::make_unique<RenderItem>();
-		auto rightSphereRitem = std::make_unique<RenderItem>();
-
-		XMMATRIX leftCylWorld = XMMatrixTranslation(-5.0f, 1.5f, -10.0f + i * 5.0f);
-		XMMATRIX rightCylWorld = XMMatrixTranslation(+5.0f, 1.5f, -10.0f + i * 5.0f);
-
-		XMMATRIX leftSphereWorld = XMMatrixTranslation(-5.0f, 3.5f, -10.0f + i * 5.0f);
-		XMMATRIX rightSphereWorld = XMMatrixTranslation(+5.0f, 3.5f, -10.0f + i * 5.0f);
-
-		leftCylRitem->World = leftCylWorld;
-		leftCylRitem->TexTransform = brickTexTransform;
-		leftCylRitem->ObjCBIndex = 3;
-		leftCylRitem->Mat = m_Materials["stone0"].get();
-		leftCylRitem->Geo = m_Geometry["shapeGeo"].get();
-		leftCylRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		leftCylRitem->IndexCount = leftCylRitem->Geo->DrawArgs["cylinder"].IndexCount;
-		leftCylRitem->StartIndexLocation = leftCylRitem->Geo->DrawArgs["cylinder"].StartIndexLocation;
-		leftCylRitem->BaseVertexLocation = leftCylRitem->Geo->DrawArgs["cylinder"].BaseVertexLocation;
-
-		rightCylRitem->World = rightCylWorld;
-		rightCylRitem->TexTransform = brickTexTransform;
-		rightCylRitem->ObjCBIndex = 3;
-		rightCylRitem->Mat = m_Materials["stone0"].get();
-		rightCylRitem->Geo = m_Geometry["shapeGeo"].get();
-		rightCylRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		rightCylRitem->IndexCount = rightCylRitem->Geo->DrawArgs["cylinder"].IndexCount;
-		rightCylRitem->StartIndexLocation = rightCylRitem->Geo->DrawArgs["cylinder"].StartIndexLocation;
-		rightCylRitem->BaseVertexLocation = rightCylRitem->Geo->DrawArgs["cylinder"].BaseVertexLocation;
-
-		leftSphereRitem->World = leftSphereWorld;
-		leftSphereRitem->TexTransform = brickTexTransform;
-		leftSphereRitem->ObjCBIndex = 3;
-		leftSphereRitem->Mat = m_Materials["stone0"].get();
-		leftSphereRitem->Geo = m_Geometry["shapeGeo"].get();
-		leftSphereRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		leftSphereRitem->IndexCount = leftSphereRitem->Geo->DrawArgs["sphere"].IndexCount;
-		leftSphereRitem->StartIndexLocation = leftSphereRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
-		leftSphereRitem->BaseVertexLocation = leftSphereRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
-
-		rightSphereRitem->World = rightSphereWorld;
-		rightSphereRitem->TexTransform = brickTexTransform;
-		rightSphereRitem->ObjCBIndex = 3;
-		rightSphereRitem->Mat = m_Materials["stone0"].get();
-		rightSphereRitem->Geo = m_Geometry["shapeGeo"].get();
-		rightSphereRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		rightSphereRitem->IndexCount = rightSphereRitem->Geo->DrawArgs["sphere"].IndexCount;
-		rightSphereRitem->StartIndexLocation = rightSphereRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
-		rightSphereRitem->BaseVertexLocation = rightSphereRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
-
-		m_ShapeRenders.push_back(std::move(leftCylRitem));
-		m_ShapeRenders.push_back(std::move(rightCylRitem));
-		m_ShapeRenders.push_back(std::move(leftSphereRitem));
-		m_ShapeRenders.push_back(std::move(rightSphereRitem));
-	}
-
-}
-
-void GameApp::BuildLandRenderItems()
-{
-	auto land = std::make_unique<RenderItem>();
-	land->World = XMMatrixIdentity() * XMMatrixScaling(0.5, 0.5, 0.5) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
-	land->TexTransform = XMMatrixScaling(5.0f, 5.0f, 1.0f);
-	land->ObjCBIndex = 0;
-	land->Mat = m_Materials["grass"].get();
-	land->Geo = m_Geometry["landGeo"].get();
-	land->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	land->IndexCount = land->Geo->DrawArgs["land"].IndexCount;
-	land->BaseVertexLocation = land->Geo->DrawArgs["land"].BaseVertexLocation;
-	land->StartIndexLocation = land->Geo->DrawArgs["land"].StartIndexLocation;
-	m_LandRenders[(int)RenderLayer::Opaque].push_back(std::move(land));
-
-	auto wave = std::make_unique<RenderItem>();
-	wave->World = XMMatrixIdentity() * XMMatrixScaling(0.6, 0.6, 0.6) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
-	wave->TexTransform = XMMatrixScaling(4.0f, 4.0f, 1.0f);
-	wave->ObjCBIndex = 1;
-	wave->Mat = m_Materials["water"].get();
-	wave->Geo = m_Geometry["waveGeo"].get();
-	wave->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	wave->IndexCount = wave->Geo->DrawArgs["wave"].IndexCount;
-	wave->BaseVertexLocation = wave->Geo->DrawArgs["wave"].BaseVertexLocation;
-	wave->StartIndexLocation = wave->Geo->DrawArgs["wave"].StartIndexLocation;
-	m_WavesRitem = wave.get();
-
-	m_LandRenders[(int)RenderLayer::Transparent].push_back(std::move(wave));
-	//m_LandRenders.push_back(std::move(wave));
-
-	auto box = std::make_unique<RenderItem>();
-	box->World = XMMatrixIdentity() * XMMatrixTranslation(.0f, -12.0f, -30.f);
-	box->ObjCBIndex = 5;
-	box->Mat = m_Materials["wirefence"].get();
-	box->Geo = m_Geometry["boxGeo"].get();
-	box->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	box->IndexCount = box->Geo->DrawArgs["sbox"].IndexCount;
-	box->BaseVertexLocation = box->Geo->DrawArgs["sbox"].BaseVertexLocation;
-	box->StartIndexLocation = box->Geo->DrawArgs["sbox"].StartIndexLocation;
-
-	m_LandRenders[(int)RenderLayer::AlphaTested].push_back(std::move(box));
-	//m_LandRenders.push_back(std::move(box));
-}
-
-void GameApp::BuildLandGeometry()
-{
-	GeometryGenerator geoGen;
-	GeometryGenerator::MeshData grid = geoGen.CreateGrid(160.0f, 160.0f, 50, 50);
-
-	//
-	// Extract the vertex elements we are interested and apply the height function to
-	// each vertex.  In addition, color the vertices based on their height so we have
-	// sandy looking beaches, grassy low hills, and snow mountain peaks.
-	//
-
-	std::vector<Vertex> vertices(grid.Vertices.size());
-	for (size_t i = 0; i < grid.Vertices.size(); ++i)
-	{
-		auto& p = grid.Vertices[i].Position;
-		vertices[i].position = p;
-		vertices[i].position.y = GetHillsHeight(p.x, p.z);
-		vertices[i].normal = GetHillsNormal(p.x, p.z);
-		vertices[i].tex = grid.Vertices[i].TexC;
-	}
-
-	std::vector<std::uint16_t> indices = grid.GetIndices16();
-
-	const uint32_t vertexBufferSize = sizeof(Vertex);
-	const uint32_t indexBufferSize = sizeof(uint16_t);
-
-	auto geo = std::make_unique<MeshGeometry>();
-	geo->name = "landGeo";
-	geo->m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), vertexBufferSize, vertices.data());
-	geo->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), indexBufferSize, indices.data());
-
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.BaseVertexLocation = 0;
-	submesh.StartIndexLocation = 0;
-	geo->DrawArgs["land"] = std::move(submesh);
-
-	m_Geometry["landGeo"] = std::move(geo);
-}
-
-void GameApp::BuildWavesGeometry()
-{
-	std::vector<std::uint16_t> indices(3 * mWaves->TriangleCount()); // 3 indices per face
-	assert(mWaves->VertexCount() < 0x0000ffff);
-
-	// Iterate over each quad.
-	int m = mWaves->RowCount();
-	int n = mWaves->ColumnCount();
-	int k = 0;
-	for (int i = 0; i < m - 1; ++i)
-	{
-		for (int j = 0; j < n - 1; ++j)
+		for (int i = 0; i < n; ++i)
 		{
-			indices[k] = i * n + j;
-			indices[k + 1] = i * n + j + 1;
-			indices[k + 2] = (i + 1) * n + j;
+			for (int j = 0; j < n; ++j)
+			{
+				int index = k * n * n + i * n + j;
+				// Position instanced along a 3D grid.
+				skullRitem->inst[index].World = XMFLOAT4X4(
+					1.0f, 0.0f, 0.0f, 0.0f,
+					0.0f, 1.0f, 0.0f, 0.0f,
+					0.0f, 0.0f, 1.0f, 0.0f,
+					x + j * dx, y + i * dy, z + k * dz, 1.0f);
 
-			indices[k + 3] = (i + 1) * n + j;
-			indices[k + 4] = i * n + j + 1;
-			indices[k + 5] = (i + 1) * n + j + 1;
-
-			k += 6; // next quad
+				XMStoreFloat4x4(&skullRitem->inst[index].TexTransform, XMMatrixScaling(2.0f, 2.0f, 1.0f));
+				skullRitem->inst[index].MaterialIndex = index % m_Materials.size();
+			}
 		}
 	}
 
-	UINT indexBufferSize = sizeof(std::uint16_t);
 
-	auto geo = std::make_unique<MeshGeometry>();
-	geo->name = "waveGeo";
-	geo->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), indexBufferSize, indices.data());
+	m_LayerRenders[(int)RenderLayer::Opaque].push_back(skullRitem.get());
 
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.BaseVertexLocation = 0;
-	submesh.StartIndexLocation = 0;
-	geo->DrawArgs["wave"] = std::move(submesh);
-
-	m_Geometry["waveGeo"] = std::move(geo);
-}
-
-void GameApp::BuildShapeGeometry()
-{
-	GeometryGenerator geoGen;
-	GeometryGenerator::MeshData box = geoGen.CreateBox(1.5f, 0.5f, 1.5f, 3);
-	GeometryGenerator::MeshData grid = geoGen.CreateGrid(20.0f, 30.0f, 60, 40);
-	GeometryGenerator::MeshData sphere = geoGen.CreateSphere(0.5f, 20, 20);
-	GeometryGenerator::MeshData cylinder = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
-
-	UINT boxVertexOffset = 0;
-	UINT gridVertexOffset = (UINT)box.Vertices.size();
-	UINT sphereVertexOffset = gridVertexOffset + (UINT)grid.Vertices.size();
-	UINT cylinderVertexOffset = sphereVertexOffset + (UINT)sphere.Vertices.size();
-
-	// Cache the starting index for each object in the concatenated index buffer.
-	UINT boxIndexOffset = 0;
-	UINT gridIndexOffset = (UINT)box.Indices32.size();
-	UINT sphereIndexOffset = gridIndexOffset + (UINT)grid.Indices32.size();
-	UINT cylinderIndexOffset = sphereIndexOffset + (UINT)sphere.Indices32.size();
-
-	SubmeshGeometry boxSubmesh;
-	boxSubmesh.IndexCount = (UINT)box.Indices32.size();
-	boxSubmesh.StartIndexLocation = boxIndexOffset;
-	boxSubmesh.BaseVertexLocation = boxVertexOffset;
-
-	SubmeshGeometry gridSubmesh;
-	gridSubmesh.IndexCount = (UINT)grid.Indices32.size();
-	gridSubmesh.StartIndexLocation = gridIndexOffset;
-	gridSubmesh.BaseVertexLocation = gridVertexOffset;
-
-	SubmeshGeometry sphereSubmesh;
-	sphereSubmesh.IndexCount = (UINT)sphere.Indices32.size();
-	sphereSubmesh.StartIndexLocation = sphereIndexOffset;
-	sphereSubmesh.BaseVertexLocation = sphereVertexOffset;
-
-	SubmeshGeometry cylinderSubmesh;
-	cylinderSubmesh.IndexCount = (UINT)cylinder.Indices32.size();
-	cylinderSubmesh.StartIndexLocation = cylinderIndexOffset;
-	cylinderSubmesh.BaseVertexLocation = cylinderVertexOffset;
-
-	auto totalVertexCount =
-		box.Vertices.size() +
-		grid.Vertices.size() +
-		sphere.Vertices.size() +
-		cylinder.Vertices.size();
-
-	std::vector<Vertex> vertices(totalVertexCount);
-
-	UINT k = 0;
-	for (size_t i = 0; i < box.Vertices.size(); ++i, ++k)
-	{
-		vertices[k].position = box.Vertices[i].Position;
-		vertices[k].normal = box.Vertices[i].Normal;
-		vertices[k].tex = box.Vertices[i].TexC;
-	}
-
-	for (size_t i = 0; i < grid.Vertices.size(); ++i, ++k)
-	{
-		vertices[k].position = grid.Vertices[i].Position;
-		vertices[k].normal = grid.Vertices[i].Normal;
-		vertices[k].tex = grid.Vertices[i].TexC;
-	}
-
-	for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k)
-	{
-		vertices[k].position = sphere.Vertices[i].Position;
-		vertices[k].normal = sphere.Vertices[i].Normal;
-		vertices[k].tex = sphere.Vertices[i].TexC;
-	}
-
-	for (size_t i = 0; i < cylinder.Vertices.size(); ++i, ++k)
-	{
-		vertices[k].position = cylinder.Vertices[i].Position;
-		vertices[k].normal = cylinder.Vertices[i].Normal;
-		vertices[k].tex = cylinder.Vertices[i].TexC;
-	}
-
-	std::vector<std::uint16_t> indices;
-	indices.insert(indices.end(), std::begin(box.GetIndices16()), std::end(box.GetIndices16()));
-	indices.insert(indices.end(), std::begin(grid.GetIndices16()), std::end(grid.GetIndices16()));
-	indices.insert(indices.end(), std::begin(sphere.GetIndices16()), std::end(sphere.GetIndices16()));
-	indices.insert(indices.end(), std::begin(cylinder.GetIndices16()), std::end(cylinder.GetIndices16()));
-
-	auto geo = std::make_unique<MeshGeometry>();
-	geo->name = "shapeGeo";
-	geo->m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), sizeof(Vertex), vertices.data());
-	geo->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), sizeof(std::uint16_t), indices.data());
-
-	geo->DrawArgs["box"] = std::move(boxSubmesh);
-	geo->DrawArgs["grid"] = std::move(gridSubmesh);
-	geo->DrawArgs["sphere"] = std::move(sphereSubmesh);
-	geo->DrawArgs["cylinder"] = std::move(cylinderSubmesh);
-
-	m_Geometry["shapeGeo"] = std::move(geo);
-}
-
-void GameApp::BuildBoxGeometry()
-{
-	GeometryGenerator geoGen;
-	GeometryGenerator::MeshData box = geoGen.CreateBox(6.0f, 6.0f, 6.0f, 3);
-
-	std::vector<Vertex> vertices(box.Vertices.size());
-	for (size_t i = 0; i < box.Vertices.size(); ++i)
-	{
-		auto& p = box.Vertices[i].Position;
-		vertices[i].position = p;
-		vertices[i].normal = box.Vertices[i].Normal;
-		vertices[i].tex = box.Vertices[i].TexC;
-	}
-
-	std::vector<std::uint16_t> indices = box.GetIndices16();
-
-	auto geo = std::make_unique<MeshGeometry>();
-	geo->name = "boxGeo";
-	geo->m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), sizeof(Vertex), vertices.data());
-	geo->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), sizeof(std::uint16_t), indices.data());
-
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.StartIndexLocation = 0;
-	submesh.BaseVertexLocation = 0;
-
-	geo->DrawArgs["sbox"] = std::move(submesh);
-
-	m_Geometry["boxGeo"] = std::move(geo);
+	m_AllRenders.push_back(std::move(skullRitem));
 }
 
 void GameApp::BuildSkullGeometry()
@@ -646,26 +314,6 @@ void GameApp::BuildSkullGeometry()
 	geo->DrawArgs["skull"] = std::move(submesh);
 
 	m_Geometry["skullGeo"] = std::move(geo);
-
-}
-
-float GameApp::GetHillsHeight(float x, float z) const
-{
-	return 0.3f * (z * sinf(0.1f * x) + x * cosf(0.1f * z));
-}
-
-XMFLOAT3 GameApp::GetHillsNormal(float x, float z) const
-{
-	// n = (-df/dx, 1, -df/dz)
-	XMFLOAT3 n(
-		-0.03f * z * cosf(0.1f * x) - 0.3f * cosf(0.1f * z),
-		1.0f,
-		-0.3f * sinf(0.1f * x) + 0.03f * x * sinf(0.1f * z));
-
-	XMVECTOR unitNormal = XMVector3Normalize(XMLoadFloat3(&n));
-	XMStoreFloat3(&n, unitNormal);
-
-	return n;
 }
 
 void GameApp::BuildMaterials()
@@ -749,7 +397,7 @@ void GameApp::BuildMaterials()
 
 void GameApp::LoadTextures()
 {
-	TextureManager::Initialize(L"textures/");
+	TextureManager::Initialize(L"../textures/");
 
 	TextureRef grassTex = TextureManager::LoadDDSFromFile(L"grass.dds");
 	if(grassTex.IsValid())
@@ -784,6 +432,35 @@ void GameApp::LoadTextures()
 	//m_srvs.resize(m_Textures.size());
 	for (auto& t : m_Textures)
 		m_srvs.push_back(t.GetSRV());
+}
+
+void GameApp::UpdateInstanceIndex(float deltaT)
+{
+	std::vector<Instances> visibleInstance;
+	for (auto& e : m_LayerRenders[(int)RenderLayer::Opaque])
+	{
+		const auto& inst = e->inst;
+		for (UINT i = 0; i < (UINT)inst.size(); ++i)
+		{
+			Instances temp;
+			XMMATRIX world = XMLoadFloat4x4(&inst[i].World);
+			XMMATRIX texTransform = XMLoadFloat4x4(&inst[i].TexTransform);
+			XMMATRIX matTransform = XMLoadFloat4x4(&inst[i].MatTransform);
+			XMStoreFloat4x4(&temp.World, XMMatrixTranspose(world));
+			XMStoreFloat4x4(&temp.TexTransform, XMMatrixTranspose(texTransform));
+			XMStoreFloat4x4(&temp.MatTransform, XMMatrixTranspose(matTransform));
+			temp.MaterialIndex = inst[i].MaterialIndex;
+			
+			visibleInstance.push_back(std::move(temp));
+		}
+
+		e->InstanceCount = visibleInstance.size();
+		
+	}
+
+	InstBuffer.Create(L"Instance buffer", (UINT)visibleInstance.size(), sizeof(Instances), visibleInstance.data());
+	
+	Utility::Printf("Instance counts: %u \n", visibleInstance.size());
 }
 
 void GameApp::UpdateCamera(float deltaT)
@@ -828,59 +505,3 @@ void GameApp::UpdateCamera(float deltaT)
 	camera.SetAspectRatio(m_aspectRatio);
 	camera.Update();
 }
-
-void GameApp::UpdateWaves(float deltaT)
-{
-	// Every quarter second, generate a random wave.
-	static float t_base = 0.0f;
-
-	t_base += deltaT;
-
-	if (t_base >= 0.25f)
-	{
-		t_base -= 0.25f;
-
-		int i = Utility::Rand(4, mWaves->RowCount() - 5);
-		int j = Utility::Rand(4, mWaves->ColumnCount() - 5);
-
-		float r = Utility::RandF(0.2f, 0.5f);
-
-		mWaves->Disturb(i, j, r);
-	}
-
-
-	// Update the wave simulation.
-	mWaves->Update(deltaT);
-
-	// Update the wave vertex buffer with the new solution.
-	m_VerticesWaves.clear();
-	for (int i = 0; i < mWaves->VertexCount(); ++i)
-	{
-		Vertex v;
-
-		v.position = mWaves->Position(i);
-		v.normal = mWaves->Normal(i);
-
-		v.tex.x = 0.5f + v.position.x / mWaves->Width();
-		v.tex.y = 0.5f - v.position.z / mWaves->Depth();
-
-		m_VerticesWaves.push_back(v);
-	}
-	AnimateMaterials(deltaT);
-
-	m_Geometry["waveGeo"]->m_VertexBuffer.Create(L"vertex buffer", m_VerticesWaves.size(), sizeof(Vertex), m_VerticesWaves.data());
-}
-
-void GameApp::AnimateMaterials(float deltaT)
-{
-	XMFLOAT4X4 matTrans;
-	XMStoreFloat4x4(&matTrans, m_WavesRitem->MatTransform);
-	float& tu = matTrans(3, 0);
-	float& tv = matTrans(3, 1);
-
-	tu += 0.01f * deltaT;
-	tv += 0.002f * deltaT;
-	
-	m_WavesRitem->MatTransform = XMLoadFloat4x4(&matTrans);
-}
-
