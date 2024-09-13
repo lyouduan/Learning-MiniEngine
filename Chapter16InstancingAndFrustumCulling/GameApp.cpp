@@ -46,6 +46,7 @@ void GameApp::Startup(void)
 
 	// build render items
 	BuildRenderItems();
+	
 
 	// initialize root signature
 	m_RootSignature.Reset(4, 1);
@@ -126,7 +127,7 @@ void GameApp::Update(float deltaT)
 	UpdateInstanceIndex(deltaT);
 
 	if (GameInput::IsFirstPressed(GameInput::kKey_f1))
-		m_bRenderShapes = !m_bRenderShapes;
+		m_bFrustumCulling = !m_bFrustumCulling;
 	
 	m_View = camera.GetViewMatrix();
 	m_Projection = camera.GetProjMatrix();
@@ -215,11 +216,11 @@ void GameApp::BuildRenderItems()
 	skullRitem->Mat = m_Materials["skullMat"].get();
 	skullRitem->Geo = m_Geometry["skullGeo"].get();
 	skullRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	skullRitem->IndexCount = skullRitem->Geo->DrawArgs["skull"].IndexCount;
 	skullRitem->InstanceCount = 0;
+	skullRitem->IndexCount = skullRitem->Geo->DrawArgs["skull"].IndexCount;
 	skullRitem->StartIndexLocation = skullRitem->Geo->DrawArgs["skull"].StartIndexLocation;
 	skullRitem->BaseVertexLocation = skullRitem->Geo->DrawArgs["skull"].BaseVertexLocation;
-
+	skullRitem->Bound = skullRitem->Geo->DrawArgs["skull"].Bound;
 	const int n = 5;
 
 	skullRitem->inst.resize(n*n*n);
@@ -279,6 +280,12 @@ void GameApp::BuildSkullGeometry()
 	fin >> ignore >> tcount;
 	fin >> ignore >> ignore >> ignore >> ignore;
 
+	XMFLOAT3 vMinf(INFINITY, INFINITY, INFINITY);
+	XMFLOAT3 vMaxf(-INFINITY, -INFINITY, -INFINITY);
+
+	XMVECTOR vMin = XMLoadFloat3(&vMinf);
+	XMVECTOR vMax = XMLoadFloat3(&vMaxf);
+
 	std::vector<Vertex> vertices(vcount);
 	for (UINT i = 0; i < vcount; ++i)
 	{
@@ -287,6 +294,11 @@ void GameApp::BuildSkullGeometry()
 
 		// Model does not have texture coordinates, so just zero them out.
 		vertices[i].tex = { 0.0f, 0.0f };
+
+		XMVECTOR P = XMLoadFloat3(&vertices[i].position);
+
+		vMin = XMVectorMin(vMin, P);
+		vMax = XMVectorMax(vMax, P);
 	}
 
 	fin >> ignore;
@@ -310,6 +322,8 @@ void GameApp::BuildSkullGeometry()
 	submesh.IndexCount = (UINT)indices.size();
 	submesh.StartIndexLocation = 0;
 	submesh.BaseVertexLocation = 0;
+	XMStoreFloat3(&submesh.Bound.Center, 0.5f * (vMax + vMin));
+	XMStoreFloat3(&submesh.Bound.Extents, 0.5f * (vMax - vMin));
 
 	geo->DrawArgs["skull"] = std::move(submesh);
 
@@ -436,31 +450,50 @@ void GameApp::LoadTextures()
 
 void GameApp::UpdateInstanceIndex(float deltaT)
 {
+	XMMATRIX view = camera.GetViewMatrix();
+	XMVECTOR vDet = XMMatrixDeterminant(view);
+	XMMATRIX invView = XMMatrixInverse(&vDet, view);
+
 	std::vector<Instances> visibleInstance;
 	for (auto& e : m_LayerRenders[(int)RenderLayer::Opaque])
 	{
 		const auto& inst = e->inst;
+		Utility::Printf("total Instance counts : %u \n", inst.size());
 		for (UINT i = 0; i < (UINT)inst.size(); ++i)
 		{
-			Instances temp;
 			XMMATRIX world = XMLoadFloat4x4(&inst[i].World);
 			XMMATRIX texTransform = XMLoadFloat4x4(&inst[i].TexTransform);
 			XMMATRIX matTransform = XMLoadFloat4x4(&inst[i].MatTransform);
-			XMStoreFloat4x4(&temp.World, XMMatrixTranspose(world));
-			XMStoreFloat4x4(&temp.TexTransform, XMMatrixTranspose(texTransform));
-			XMStoreFloat4x4(&temp.MatTransform, XMMatrixTranspose(matTransform));
-			temp.MaterialIndex = inst[i].MaterialIndex;
+
+			XMVECTOR wDet = XMMatrixDeterminant(world);
+			XMMATRIX invWorld = XMMatrixInverse(&wDet, world);
+
+			// View space to the object's local space.
+			XMMATRIX viewToLocal = XMMatrixMultiply(invView, invWorld);
+
+			// Transform the camera frustum from view space to the object's local space.
 			
-			visibleInstance.push_back(std::move(temp));
+
+			BoundingFrustum localSpaceFrustum;
+			mCamFrustum.Transform(localSpaceFrustum, viewToLocal);
+
+			if ((localSpaceFrustum.Contains(e->Bound) != DirectX::DISJOINT) || m_bFrustumCulling)
+			{
+				Instances temp;
+				XMStoreFloat4x4(&temp.World, XMMatrixTranspose(world));
+				XMStoreFloat4x4(&temp.TexTransform, XMMatrixTranspose(texTransform));
+				XMStoreFloat4x4(&temp.MatTransform, XMMatrixTranspose(matTransform));
+				temp.MaterialIndex = inst[i].MaterialIndex;
+				visibleInstance.push_back(std::move(temp));
+			}
 		}
 
 		e->InstanceCount = visibleInstance.size();
-		
 	}
 
 	InstBuffer.Create(L"Instance buffer", (UINT)visibleInstance.size(), sizeof(Instances), visibleInstance.data());
 	
-	Utility::Printf("Instance counts: %u \n", visibleInstance.size());
+	Utility::Printf("Instance counts after culling : %u \n", visibleInstance.size());
 }
 
 void GameApp::UpdateCamera(float deltaT)
@@ -504,4 +537,6 @@ void GameApp::UpdateCamera(float deltaT)
 	camera.SetEyeAtUp({x,y,z}, Math::Vector3(Math::kZero), Math::Vector3(Math::kYUnitVector));
 	camera.SetAspectRatio(m_aspectRatio);
 	camera.Update();
+
+	BoundingFrustum::CreateFromMatrix(mCamFrustum, camera.GetProjMatrix());
 }

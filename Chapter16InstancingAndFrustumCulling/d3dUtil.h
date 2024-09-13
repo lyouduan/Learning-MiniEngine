@@ -3,7 +3,7 @@
 #include <string>
 #include "GpuBuffer.h"
 
-
+#include <DirectXCollision.h>
 
 struct Material
 {
@@ -28,6 +28,8 @@ struct Vertex {
 
 struct SubmeshGeometry
 {
+	DirectX::BoundingBox Bound;
+
 	UINT IndexCount = 0;
 	UINT StartIndexLocation = 0;
 	INT BaseVertexLocation = 0;
@@ -43,6 +45,7 @@ struct MeshGeometry
 	ByteAddressBuffer m_IndexBuffer;
 
 	std::unordered_map<std::string, SubmeshGeometry> DrawArgs;
+
 };
 
 // shader constants

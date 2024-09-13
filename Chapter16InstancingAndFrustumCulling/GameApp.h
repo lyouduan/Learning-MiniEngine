@@ -11,6 +11,8 @@
 #include "TextureManager.h"
 #include "Camera.h"
 
+#include <DirectXCollision.h>
+
 enum class RenderLayer : int
 {
 	Opaque = 0,
@@ -30,6 +32,8 @@ struct RenderItem
 	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	std::vector<Instances> inst;
+
+	DirectX::BoundingBox Bound;
 
 	MeshGeometry* Geo = nullptr;
 
@@ -77,9 +81,6 @@ private:
 
 	std::unordered_map<std::string, GraphicsPSO> m_PSOs;
 
-	// switch render scene
-	bool m_bRenderShapes = true;
-
 	// List of all the render items.
 	std::vector < std::unique_ptr<RenderItem>> m_AllRenders;
 	//std::vector < std::unique_ptr<RenderItem>> m_LandRenders;
@@ -93,6 +94,10 @@ private:
 	// texture manager
 	std::vector<TextureRef> m_Textures; // work
 	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_srvs;
+	
+	BoundingFrustum mCamFrustum;
+	// switch render scene
+	bool m_bFrustumCulling = true;
 
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;
