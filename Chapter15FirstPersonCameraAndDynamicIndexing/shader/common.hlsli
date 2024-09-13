@@ -8,6 +8,11 @@ struct ObjConstants
 {
     float4x4 gWorld;
     float4x4 gTexTransform;
+    float4x4 gMatTransform;
+    uint gMaterialIndex;
+    uint gObjPad1;
+    uint gObjPad2;
+    uint gObjPad3;
 };
 
 struct Light
@@ -34,17 +39,27 @@ struct PassConstants
     float pad2;
 };
 
-struct MaterialConstants
+struct MaterialData
 {
     float4x4 gMatTransform;
-    float4 gDiffuseAlbedo;
-    float3 gFresnelR0;
-    float gRoughness;
+    float4   gDiffuseAlbedo;
+    float3   gFresnelR0;
+    float    gRoughness;
+    uint gDiffuseMapIndex;
+    uint MatPad1;
+    uint MatPad2;
+    uint MatPad3;
 };
 
 ConstantBuffer<ObjConstants> objConstants : register(b0);
 ConstantBuffer<PassConstants> passConstants : register(b1);
-ConstantBuffer<MaterialConstants> matConstants : register(b2);
+
+
+Texture2D gDiffuseMap[7] : register(t0);
+// structured buffer
+StructuredBuffer<MaterialData> gMaterialData : register(t0, space1);
+
+SamplerState gsamLinearClamp : register(s0);
 
 struct VertexIn
 {

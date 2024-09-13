@@ -25,6 +25,7 @@ struct RenderItem
 	RenderItem() = default;
 	DirectX::XMMATRIX World = XMMatrixIdentity();
 	DirectX::XMMATRIX TexTransform = XMMatrixIdentity();
+	DirectX::XMMATRIX MatTransform = XMMatrixIdentity();
 
 	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
@@ -32,11 +33,13 @@ struct RenderItem
 
 	Material* Mat = nullptr;
 
+	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
+	UINT ObjCBIndex = -1; 
+
 	UINT IndexCount = 0;
 	UINT StartIndexLocation = 0;
 	UINT BaseVertexLocation = 0;
 
-	D3D12_CPU_DESCRIPTOR_HANDLE srv; // point to shader resource view
 };
 
 class GraphicsContext;
@@ -94,11 +97,12 @@ private:
 
 	// materials
 	std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
+
 	// geometry
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometry;
 	// texture manager
-	//std::unordered_map<std::string, D3D12_CPU_DESCRIPTOR_HANDLE> m_Textures; // 直接引用handle不行？
-	std::unordered_map<std::string, TextureRef> m_Textures; // work
+	std::vector<TextureRef> m_Textures; // work
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_srvs;
 
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;
@@ -108,6 +112,7 @@ private:
 	DirectX::XMMATRIX m_Projection;
 
 	PassConstants passConstant;
+	StructuredBuffer matBuffer;
 
 	// camera
 	Math::Camera camera;

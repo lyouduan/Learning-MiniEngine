@@ -14,6 +14,10 @@ struct Material
 	float Roughness = 0.25f; // align with float3
 
 	DirectX::XMMATRIX MatTransform = DirectX::XMMatrixIdentity();
+
+	UINT DiffuseMapIndex = 0;
+	UINT MaterialPad[3];
+
 };
 
 struct Vertex {
@@ -49,8 +53,8 @@ __declspec(align(16)) struct MaterialConstants
 	DirectX::XMFLOAT4 DiffuseAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f };
 	DirectX::XMFLOAT3 FresnelR0 = { 1.0f, 1.0f, 1.0f };
 	float Roughness = 0.25f; 
-
-
+	UINT DiffuseMapIndex = 0;
+	UINT MaterialPad[3];
 };
 
 __declspec(align(16)) struct Light
@@ -67,6 +71,9 @@ __declspec(align(16)) struct ObjConstants
 {
 	DirectX::XMFLOAT4X4 World;
 	DirectX::XMFLOAT4X4 TexTransform;
+	DirectX::XMFLOAT4X4 MatTransform;
+	UINT MaterialIndex = 0;
+	UINT ObjPad[3];
 };
 
 #define MaxLights 16

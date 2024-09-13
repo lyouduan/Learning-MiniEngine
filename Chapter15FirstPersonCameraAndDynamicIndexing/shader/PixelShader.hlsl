@@ -1,13 +1,18 @@
 #include "common.hlsli"
 #include "LightingUtil.hlsli"
 
-Texture2D gDiffuseMap : register(t0);
-
-SamplerState gsamLinearClamp : register(s0);
 
 float4 main(VertexOut input) : SV_TARGET
 {
-    float4 diffuseAlbedo = gDiffuseMap.Sample(gsamLinearClamp, input.tex) * matConstants.gDiffuseAlbedo;
+    MaterialData matData = gMaterialData[objConstants.gMaterialIndex];
+    float4 diffuseAlbedo = matData.gDiffuseAlbedo;
+    float3 fresnelR0 = matData.gFresnelR0;
+    float roughness = matData.gRoughness;
+    
+    uint diffuseMapIndex = matData.gDiffuseMapIndex;
+    
+    
+    diffuseAlbedo *= gDiffuseMap[diffuseMapIndex].Sample(gsamLinearClamp, input.tex);
 // alpha tested
     clip(diffuseAlbedo.a - 0.1f);
     
@@ -20,9 +25,9 @@ float4 main(VertexOut input) : SV_TARGET
     // 
     float4 ambient = passConstants.gAmbientLight * diffuseAlbedo;
     
-    const float shininess = 1.0f - matConstants.gRoughness;
+    const float shininess = 1.0f - roughness;
     
-    Material mat = { diffuseAlbedo, matConstants.gFresnelR0, shininess };
+    Material mat = { diffuseAlbedo, fresnelR0, shininess };
     float3 shadowFactor = 1.0f;
     float4 directLight = ComputeLighting(passConstants.Lights, mat, input.positionW,
         input.normal, toEyeW, shadowFactor);

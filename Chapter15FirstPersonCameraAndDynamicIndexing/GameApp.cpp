@@ -57,10 +57,10 @@ void GameApp::Startup(void)
 
 	// initialize root signature
 	m_RootSignature.Reset(4, 1);
-	m_RootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX);
+	m_RootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL);
 	m_RootSignature[1].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_ALL);
-	m_RootSignature[2].InitAsConstantBuffer(2, D3D12_SHADER_VISIBILITY_ALL);
-	m_RootSignature[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_RootSignature[2].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_ALL, 1);
+	m_RootSignature[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, m_srvs.size());
 	// sampler
 	m_RootSignature.InitStaticSampler(0, Graphics::SamplerLinearWrapDesc, D3D12_SHADER_VISIBILITY_PIXEL);
 
@@ -128,6 +128,9 @@ void GameApp::Cleanup(void)
 			iter->Geo->m_IndexBuffer.Destroy();
 		}
 	}
+
+	m_Materials.clear();
+	m_Textures.clear();
 	
 }
 
@@ -189,16 +192,22 @@ void GameApp::RenderScene(void)
 	// set render target
 	gfxContext.SetRenderTarget(g_DisplayPlane[g_CurrentBuffer].GetRTV(), g_SceneDepthBuffer.GetDSV());
 
-	//set root signature
-	gfxContext.SetPipelineState(m_PSOs["opaque"]);
-
 	gfxContext.SetRootSignature(m_RootSignature);
 
 	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
+	// structured buffer
+	gfxContext.SetBufferSRV(2, matBuffer);
+
+	// srv tables
+	gfxContext.SetDynamicDescriptors(3, 0, m_srvs.size(), &m_srvs[0]);
+
 	// draw call
 	if (m_bRenderShapes)
+	{
+		gfxContext.SetPipelineState(m_PSOs["opaque"]);
 		DrawRenderItems(gfxContext, m_ShapeRenders);
+	}
 	else
 	{
 		gfxContext.SetPipelineState(m_PSOs["opaque"]);
@@ -210,7 +219,6 @@ void GameApp::RenderScene(void)
 		gfxContext.SetPipelineState(m_PSOs["alphaTested"]);
 		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::AlphaTested]);
 	}
-		
 	
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 
@@ -220,7 +228,6 @@ void GameApp::RenderScene(void)
 void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<std::unique_ptr<RenderItem>>& items)
 {
 	ObjConstants objConstants;
-	MaterialConstants matCB;
 	for (auto& iter : items)
 	{
 		gfxContext.SetPrimitiveTopology(iter->PrimitiveType);
@@ -229,17 +236,10 @@ void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<std::uniq
 
 		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(iter->World)); // hlsl 列主序矩阵
 		XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(iter->TexTransform)); // hlsl 列主序矩阵
+		XMStoreFloat4x4(&objConstants.MatTransform, XMMatrixTranspose(iter->MatTransform)); // hlsl 列主序矩阵
+		objConstants.MaterialIndex = iter->ObjCBIndex;
+
 		gfxContext.SetDynamicConstantBufferView(0, sizeof(objConstants), &objConstants);
-
-		XMStoreFloat4x4(&matCB.MatTransform, XMMatrixTranspose(iter->Mat->MatTransform));
-		matCB.DiffuseAlbedo = iter->Mat->DiffuseAlbedo;
-		matCB.FresnelR0 = iter->Mat->FresnelR0;
-		matCB.Roughness = iter->Mat->Roughness;
-		// constants
-		gfxContext.SetDynamicConstantBufferView(2, sizeof(MaterialConstants), &matCB);
-
-		// srv
-		gfxContext.SetDynamicDescriptor(3, 0, iter->srv);
 
 		gfxContext.DrawIndexedInstanced(iter->IndexCount, 1, iter->StartIndexLocation, iter->BaseVertexLocation, 0);
 	}
@@ -250,36 +250,36 @@ void GameApp::BuildShapeRenderItems()
 	auto boxRitem = std::make_unique<RenderItem>();
 	boxRitem->World = XMMatrixIdentity() * XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f);
 	boxRitem->TexTransform = XMMatrixScaling(1.0f, 1.0f, 1.0f);
-	boxRitem->Mat = m_Materials["stone0"].get();
+	boxRitem->ObjCBIndex = 3;
+	boxRitem->Mat = m_Materials["bricks0"].get();
 	boxRitem->Geo = m_Geometry["shapeGeo"].get();
 	boxRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	boxRitem->IndexCount = boxRitem->Geo->DrawArgs["box"].IndexCount;
 	boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs["box"].StartIndexLocation;
 	boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation;
-	boxRitem->srv = m_Textures["bricks2"].GetSRV();
 	m_ShapeRenders.push_back(std::move(boxRitem));
 
 	auto gridRitem = std::make_unique<RenderItem>();
 	gridRitem->World = XMMatrixIdentity();
 	gridRitem->TexTransform = XMMatrixScaling(8.0f, 8.0f, 1.0f);
+	gridRitem->ObjCBIndex = 2;
 	gridRitem->Mat = m_Materials["tile0"].get();
 	gridRitem->Geo = m_Geometry["shapeGeo"].get();
 	gridRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
 	gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
 	gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
-	gridRitem->srv = m_Textures["tile"].GetSRV();
 	m_ShapeRenders.push_back(std::move(gridRitem));
 
 	auto skullRitem = std::make_unique<RenderItem>();
 	skullRitem->World = XMMatrixIdentity() * XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f);
+	skullRitem->ObjCBIndex = 6;
 	skullRitem->Mat = m_Materials["skullMat"].get();
 	skullRitem->Geo = m_Geometry["skullGeo"].get();
 	skullRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	skullRitem->IndexCount = skullRitem->Geo->DrawArgs["skull"].IndexCount;
 	skullRitem->StartIndexLocation = skullRitem->Geo->DrawArgs["skull"].StartIndexLocation;
 	skullRitem->BaseVertexLocation = skullRitem->Geo->DrawArgs["skull"].BaseVertexLocation;
-	skullRitem->srv = m_Textures["white1x1"].GetSRV();
 	m_ShapeRenders.push_back(std::move(skullRitem));
 
 	XMMATRIX brickTexTransform = XMMatrixScaling(1.0f, 1.0f, 1.0f);
@@ -298,43 +298,43 @@ void GameApp::BuildShapeRenderItems()
 
 		leftCylRitem->World = leftCylWorld;
 		leftCylRitem->TexTransform = brickTexTransform;
+		leftCylRitem->ObjCBIndex = 3;
 		leftCylRitem->Mat = m_Materials["stone0"].get();
 		leftCylRitem->Geo = m_Geometry["shapeGeo"].get();
 		leftCylRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		leftCylRitem->IndexCount = leftCylRitem->Geo->DrawArgs["cylinder"].IndexCount;
 		leftCylRitem->StartIndexLocation = leftCylRitem->Geo->DrawArgs["cylinder"].StartIndexLocation;
 		leftCylRitem->BaseVertexLocation = leftCylRitem->Geo->DrawArgs["cylinder"].BaseVertexLocation;
-		leftCylRitem->srv = m_Textures["stone"].GetSRV();
 
 		rightCylRitem->World = rightCylWorld;
 		rightCylRitem->TexTransform = brickTexTransform;
+		rightCylRitem->ObjCBIndex = 3;
 		rightCylRitem->Mat = m_Materials["stone0"].get();
 		rightCylRitem->Geo = m_Geometry["shapeGeo"].get();
 		rightCylRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		rightCylRitem->IndexCount = rightCylRitem->Geo->DrawArgs["cylinder"].IndexCount;
 		rightCylRitem->StartIndexLocation = rightCylRitem->Geo->DrawArgs["cylinder"].StartIndexLocation;
 		rightCylRitem->BaseVertexLocation = rightCylRitem->Geo->DrawArgs["cylinder"].BaseVertexLocation;
-		rightCylRitem->srv = m_Textures["stone"].GetSRV();
 
 		leftSphereRitem->World = leftSphereWorld;
 		leftSphereRitem->TexTransform = brickTexTransform;
+		leftSphereRitem->ObjCBIndex = 3;
 		leftSphereRitem->Mat = m_Materials["stone0"].get();
 		leftSphereRitem->Geo = m_Geometry["shapeGeo"].get();
 		leftSphereRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		leftSphereRitem->IndexCount = leftSphereRitem->Geo->DrawArgs["sphere"].IndexCount;
 		leftSphereRitem->StartIndexLocation = leftSphereRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
 		leftSphereRitem->BaseVertexLocation = leftSphereRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
-		leftSphereRitem->srv = m_Textures["stone"].GetSRV();
 
 		rightSphereRitem->World = rightSphereWorld;
 		rightSphereRitem->TexTransform = brickTexTransform;
+		rightSphereRitem->ObjCBIndex = 3;
 		rightSphereRitem->Mat = m_Materials["stone0"].get();
 		rightSphereRitem->Geo = m_Geometry["shapeGeo"].get();
 		rightSphereRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		rightSphereRitem->IndexCount = rightSphereRitem->Geo->DrawArgs["sphere"].IndexCount;
 		rightSphereRitem->StartIndexLocation = rightSphereRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
 		rightSphereRitem->BaseVertexLocation = rightSphereRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
-		rightSphereRitem->srv = m_Textures["stone"].GetSRV();
 
 		m_ShapeRenders.push_back(std::move(leftCylRitem));
 		m_ShapeRenders.push_back(std::move(rightCylRitem));
@@ -349,26 +349,25 @@ void GameApp::BuildLandRenderItems()
 	auto land = std::make_unique<RenderItem>();
 	land->World = XMMatrixIdentity() * XMMatrixScaling(0.5, 0.5, 0.5) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
 	land->TexTransform = XMMatrixScaling(5.0f, 5.0f, 1.0f);
-	land->Geo = m_Geometry["landGeo"].get();
+	land->ObjCBIndex = 0;
 	land->Mat = m_Materials["grass"].get();
+	land->Geo = m_Geometry["landGeo"].get();
 	land->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	land->IndexCount = land->Geo->DrawArgs["land"].IndexCount;
 	land->BaseVertexLocation = land->Geo->DrawArgs["land"].BaseVertexLocation;
 	land->StartIndexLocation = land->Geo->DrawArgs["land"].StartIndexLocation;
-	land->srv = m_Textures["grass"].GetSRV();
-
 	m_LandRenders[(int)RenderLayer::Opaque].push_back(std::move(land));
 
 	auto wave = std::make_unique<RenderItem>();
 	wave->World = XMMatrixIdentity() * XMMatrixScaling(0.6, 0.6, 0.6) * XMMatrixTranslation(0.0f, -15.0f, -30.f);
 	wave->TexTransform = XMMatrixScaling(4.0f, 4.0f, 1.0f);
-	wave->Geo = m_Geometry["waveGeo"].get();
+	wave->ObjCBIndex = 1;
 	wave->Mat = m_Materials["water"].get();
+	wave->Geo = m_Geometry["waveGeo"].get();
 	wave->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	wave->IndexCount = wave->Geo->DrawArgs["wave"].IndexCount;
 	wave->BaseVertexLocation = wave->Geo->DrawArgs["wave"].BaseVertexLocation;
 	wave->StartIndexLocation = wave->Geo->DrawArgs["wave"].StartIndexLocation;
-	wave->srv = m_Textures["water"].GetSRV();
 	m_WavesRitem = wave.get();
 
 	m_LandRenders[(int)RenderLayer::Transparent].push_back(std::move(wave));
@@ -376,13 +375,13 @@ void GameApp::BuildLandRenderItems()
 
 	auto box = std::make_unique<RenderItem>();
 	box->World = XMMatrixIdentity() * XMMatrixTranslation(.0f, -12.0f, -30.f);
-	box->Geo = m_Geometry["boxGeo"].get();
+	box->ObjCBIndex = 5;
 	box->Mat = m_Materials["wirefence"].get();
+	box->Geo = m_Geometry["boxGeo"].get();
 	box->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	box->IndexCount = box->Geo->DrawArgs["sbox"].IndexCount;
 	box->BaseVertexLocation = box->Geo->DrawArgs["sbox"].BaseVertexLocation;
 	box->StartIndexLocation = box->Geo->DrawArgs["sbox"].StartIndexLocation;
-	box->srv = m_Textures["wireFence"].GetSRV();
 
 	m_LandRenders[(int)RenderLayer::AlphaTested].push_back(std::move(box));
 	//m_LandRenders.push_back(std::move(box));
@@ -673,6 +672,7 @@ void GameApp::BuildMaterials()
 {
 	auto grass = std::make_unique<Material>();
 	grass->Name = "grass";
+	grass->DiffuseMapIndex = 0;
 	grass->DiffuseAlbedo = XMFLOAT4(1.0, 1.0, 1.0, 1.0f);
 	grass->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	grass->Roughness = 0.125f;
@@ -681,55 +681,70 @@ void GameApp::BuildMaterials()
 	// tools we need (transparency, environment reflection), so we fake it for now.
 	auto water = std::make_unique<Material>();
 	water->Name = "water";
+	water->DiffuseMapIndex = 1;
 	water->DiffuseAlbedo = XMFLOAT4(1.0, 1.0, 1.0, 0.5f);
 	water->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
 	water->Roughness = 0.0f;
 
-	auto bricks0 = std::make_unique<Material>();
-	bricks0->Name = "bricks0";
-	//bricks0->MatCBIndex = 0;
-	//bricks0->DiffuseSrvHeapIndex = 0;
-	bricks0->DiffuseAlbedo = XMFLOAT4(Colors::ForestGreen);
-	bricks0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-	bricks0->Roughness = 0.1f;
-
-	auto stone0 = std::make_unique<Material>();
-	stone0->Name = "stone0";
-	//stone0->MatCBIndex = 1;
-	//stone0->DiffuseSrvHeapIndex = 1;
-	stone0->DiffuseAlbedo = XMFLOAT4(Colors::LightSteelBlue);
-	stone0->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
-	stone0->Roughness = 0.3f;
-
 	auto tile0 = std::make_unique<Material>();
 	tile0->Name = "tile0";
-	//tile0->MatCBIndex = 2;
-	//tile0->DiffuseSrvHeapIndex = 2;
+	tile0->DiffuseMapIndex = 2;
 	tile0->DiffuseAlbedo = XMFLOAT4(Colors::LightGray);
 	tile0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 	tile0->Roughness = 0.2f;
 
-	auto skullMat = std::make_unique<Material>();
-	skullMat->Name = "skullMat";
-	//skullMat->MatCBIndex = 3;
-	//skullMat->DiffuseSrvHeapIndex = 3;
-	skullMat->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
-	skullMat->Roughness = 0.3f;
+	auto stone0 = std::make_unique<Material>();
+	stone0->Name = "stone0";
+	stone0->DiffuseMapIndex = 3;
+	stone0->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	stone0->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
+	stone0->Roughness = 0.3f;
+
+	auto bricks0 = std::make_unique<Material>();
+	bricks0->Name = "bricks0";
+	bricks0->DiffuseMapIndex = 4;
+	bricks0->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	bricks0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
+	bricks0->Roughness = 0.1f;
 
 	auto wirefence = std::make_unique<Material>();
 	wirefence->Name = "wirefence";
+	wirefence->DiffuseMapIndex = 5;
 	wirefence->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	wirefence->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
 	wirefence->Roughness = 0.25f;
 
-	m_Materials["grass"] = std::move(grass);
-	m_Materials["water"] = std::move(water);
-	m_Materials["bricks0"] = std::move(bricks0);
-	m_Materials["stone0"] = std::move(stone0);
-	m_Materials["tile0"] = std::move(tile0);
-	m_Materials["skullMat"] = std::move(skullMat);
-	m_Materials["wirefence"] = std::move(wirefence);
+	auto skullMat = std::make_unique<Material>();
+	skullMat->Name = "skullMat";
+	skullMat->DiffuseMapIndex = 6;
+	skullMat->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
+	skullMat->Roughness = 0.3f;
+
+	m_Materials[grass->Name] = std::move(grass);
+	m_Materials[tile0->Name] = std::move(tile0);
+	m_Materials[water->Name] = std::move(water);
+	m_Materials[stone0->Name] = std::move(stone0);
+	m_Materials[bricks0->Name] = std::move(bricks0);
+	m_Materials[wirefence->Name] = std::move(wirefence);
+	m_Materials[skullMat->Name] = std::move(skullMat);
+
+	std::vector<MaterialConstants> mat;
+	MaterialConstants temp;
+	for (auto& m : m_Materials)
+	{
+		temp.DiffuseAlbedo = m.second->DiffuseAlbedo;
+		temp.FresnelR0 = m.second->FresnelR0;
+		temp.DiffuseMapIndex = m.second->DiffuseMapIndex;
+		XMStoreFloat4x4(&temp.MatTransform, XMMatrixTranspose(m.second->MatTransform));
+		temp.Roughness = m.second->Roughness;
+		mat.push_back(temp);
+	}
+	std::sort(mat.begin(), mat.end(), 
+		[](const MaterialConstants& a, const MaterialConstants& b) 
+		{return a.DiffuseMapIndex < b.DiffuseMapIndex; }
+	);
+	matBuffer.Create(L"material buffer", (UINT)m_Materials.size(), sizeof(MaterialConstants), mat.data());
 }
 
 void GameApp::LoadTextures()
@@ -738,38 +753,37 @@ void GameApp::LoadTextures()
 
 	TextureRef grassTex = TextureManager::LoadDDSFromFile(L"grass.dds");
 	if(grassTex.IsValid())
-		m_Textures["grass"] = grassTex;
+		m_Textures.push_back(grassTex);
 
 	TextureRef waterTex = TextureManager::LoadDDSFromFile(L"water1.dds");
 	if (waterTex.IsValid())
-		m_Textures["water"] = waterTex;
+		m_Textures.push_back(waterTex);
 
 	TextureRef tileTex = TextureManager::LoadDDSFromFile(L"tile.dds");
 	if (tileTex.IsValid())
-		m_Textures["tile"] = tileTex;
+		m_Textures.push_back(tileTex);
 
 	TextureRef stoneTex = TextureManager::LoadDDSFromFile(L"stone.dds");
 	if (stoneTex.IsValid())
-		m_Textures["stone"] = stoneTex;
+		m_Textures.push_back(stoneTex);
 
 	TextureRef bricks2Tex = TextureManager::LoadDDSFromFile(L"bricks2.dds");
 	if (bricks2Tex.IsValid())
-		m_Textures["bricks2"] = bricks2Tex;
-
-	TextureRef woodTex = TextureManager::LoadDDSFromFile(L"WoodCrate01.dds");
-	if (woodTex.IsValid())
-		m_Textures["wood"] = woodTex;
+		m_Textures.push_back(bricks2Tex);
 
 	TextureRef WireFenceTex = TextureManager::LoadDDSFromFile(L"WireFence.dds");
 	if (WireFenceTex.IsValid())
-		m_Textures["wireFence"] = WireFenceTex;
+		m_Textures.push_back(WireFenceTex);
 
 	TextureRef white1x1Tex = TextureManager::LoadDDSFromFile(L"white1x1.dds");
 	if (white1x1Tex.IsValid())
-		m_Textures["white1x1"] = white1x1Tex;
+		m_Textures.push_back(white1x1Tex);
 
 	Utility::Printf("Found %u textures\n", m_Textures.size());
-	
+
+	//m_srvs.resize(m_Textures.size());
+	for (auto& t : m_Textures)
+		m_srvs.push_back(t.GetSRV());
 }
 
 void GameApp::UpdateCamera(float deltaT)
@@ -860,13 +874,13 @@ void GameApp::UpdateWaves(float deltaT)
 void GameApp::AnimateMaterials(float deltaT)
 {
 	XMFLOAT4X4 matTrans;
-	XMStoreFloat4x4(&matTrans, m_WavesRitem->Mat->MatTransform);
+	XMStoreFloat4x4(&matTrans, m_WavesRitem->MatTransform);
 	float& tu = matTrans(3, 0);
 	float& tv = matTrans(3, 1);
 
 	tu += 0.01f * deltaT;
 	tv += 0.002f * deltaT;
 	
-	m_WavesRitem->Mat->MatTransform = XMLoadFloat4x4(&matTrans);
+	m_WavesRitem->MatTransform = XMLoadFloat4x4(&matTrans);
 }
 
