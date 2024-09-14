@@ -473,11 +473,11 @@ void GameApp::UpdateInstanceIndex(float deltaT)
 
 			// Transform the camera frustum from view space to the object's local space.
 			
+			//BoundingFrustum localSpaceFrustum;
+			//mCamFrustum.Transform(localSpaceFrustum, viewToLocal);
 
-			BoundingFrustum localSpaceFrustum;
-			mCamFrustum.Transform(localSpaceFrustum, viewToLocal);
-
-			if ((localSpaceFrustum.Contains(e->Bound) != DirectX::DISJOINT) || m_bFrustumCulling)
+			//if ((localSpaceFrustum.Contains(e->Bound) != DirectX::DISJOINT) || m_bFrustumCulling)
+			if ((frustum.Intersection(e->Bound, viewToLocal)) || m_bFrustumCulling)
 			{
 				Instances temp;
 				XMStoreFloat4x4(&temp.World, XMMatrixTranspose(world));
@@ -539,4 +539,6 @@ void GameApp::UpdateCamera(float deltaT)
 	camera.Update();
 
 	BoundingFrustum::CreateFromMatrix(mCamFrustum, camera.GetProjMatrix());
+	cameraFrustum.CreateFromMatrix(frustum, camera.GetProjMatrix());
+
 }

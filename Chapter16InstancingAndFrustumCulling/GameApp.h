@@ -12,6 +12,7 @@
 #include "Camera.h"
 
 #include <DirectXCollision.h>
+#include "FrustumCulling.h"
 
 enum class RenderLayer : int
 {
@@ -96,6 +97,10 @@ private:
 	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_srvs;
 	
 	BoundingFrustum mCamFrustum;
+
+	FrustumCulling cameraFrustum;
+	MyBoundingFrustum frustum;
+
 	// switch render scene
 	bool m_bFrustumCulling = true;
 

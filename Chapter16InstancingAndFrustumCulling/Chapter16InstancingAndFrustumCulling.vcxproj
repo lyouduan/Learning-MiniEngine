@@ -52,6 +52,7 @@
     <ClCompile Include="Core\Utils\pch.cpp" />
     <ClCompile Include="Core\Utils\Utility.cpp" />
     <ClCompile Include="Core\Utils\Waves.cpp" />
+    <ClCompile Include="FrustumCulling.cpp" />
     <ClCompile Include="GameApp.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
@@ -104,6 +105,7 @@
     <ClInclude Include="Core\Utils\VectorMath.h" />
     <ClInclude Include="Core\Utils\Waves.h" />
     <ClInclude Include="d3dUtil.h" />
+    <ClInclude Include="FrustumCulling.h" />
     <ClInclude Include="GameApp.h" />
   </ItemGroup>
   <ItemGroup>

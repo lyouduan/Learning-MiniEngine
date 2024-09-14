@@ -120,6 +120,9 @@
     <ClCompile Include="Core\GraphicsCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FrustumCulling.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h">
@@ -267,6 +270,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Core\GraphicsCore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FrustumCulling.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
