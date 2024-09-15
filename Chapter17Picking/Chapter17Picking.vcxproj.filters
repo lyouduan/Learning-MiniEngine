@@ -282,5 +282,6 @@
   <ItemGroup>
     <FxCompile Include="shader\PixelShader.hlsl" />
     <FxCompile Include="shader\VertexShader.hlsl" />
+    <FxCompile Include="shader\pPS.hlsl" />
   </ItemGroup>
 </Project>

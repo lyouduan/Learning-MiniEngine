@@ -17,6 +17,7 @@
 using namespace Graphics;
 using namespace DirectX;
 
+
 GameApp::GameApp(void)
 {
 	m_Scissor.left = 0;
@@ -73,6 +74,7 @@ void GameApp::Startup(void)
 	// shader 
 	ComPtr<ID3DBlob> vertexBlob;
 	ComPtr<ID3DBlob> pixelBlob;
+	ComPtr<ID3DBlob> pPixelBlob;
 	D3DReadFileToBlob(L"shader/VertexShader.cso", &vertexBlob);
 	D3DReadFileToBlob(L"shader/PixelShader.cso", &pixelBlob);
 
@@ -90,19 +92,20 @@ void GameApp::Startup(void)
 	opaquePSO.Finalize();
 	m_PSOs["opaque"] = opaquePSO;
 
-	GraphicsPSO transpacrentPSO = opaquePSO;
-	auto blend = Graphics::BlendTraditional;
-	blend.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-	transpacrentPSO.SetBlendState(blend);
-	transpacrentPSO.Finalize();
-	m_PSOs["transparent"] = transpacrentPSO;
+	GraphicsPSO highlightPSO = opaquePSO;
+	// Change the depth test from < to <= so that if we draw the same triangle twice, it will
+	// still pass the depth test.  This is needed because we redraw the picked triangle with a
+	// different material to highlight it.  If we do not use <=, the triangle will fail the 
+	// depth test the 2nd time we try and draw it.
+	auto depthDesc = DepthStateReadWriteRZ;
+	depthDesc.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 
-	GraphicsPSO alphaTestedPSO = opaquePSO;
-	auto rater = RasterizerDefault;
-	rater.CullMode = D3D12_CULL_MODE_NONE; // not cull 
-	alphaTestedPSO.SetRasterizerState(rater);
-	alphaTestedPSO.Finalize();
-	m_PSOs["alphaTested"] = alphaTestedPSO;
+	auto blendDesc = Graphics::BlendTraditional;
+	blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+	highlightPSO.SetBlendState(blendDesc);
+	highlightPSO.SetDepthStencilState(depthDesc);
+	highlightPSO.Finalize();
+	m_PSOs["highlight"] = highlightPSO;
 
 }
 
@@ -125,6 +128,8 @@ void GameApp::Update(float deltaT)
 	UpdateCamera(deltaT);
 	// update Instance
 	UpdateInstanceIndex(deltaT);
+
+	Pick();
 
 	if (GameInput::IsFirstPressed(GameInput::kKey_f1))
 		m_bFrustumCulling = !m_bFrustumCulling;
@@ -168,7 +173,7 @@ void GameApp::RenderScene(void)
 	// clear dsv
 	gfxContext.ClearDepthAndStencil(g_SceneDepthBuffer);
 	// clear rtv
-	g_DisplayPlane[g_CurrentBuffer].SetClearColor(Color(passConstant.fogColor.x, passConstant.fogColor.y, passConstant.fogColor.z, passConstant.fogColor.w));
+	g_DisplayPlane[g_CurrentBuffer].SetClearColor(Color(0.2f, 0.4, 0.6, 1.0));
 
 	gfxContext.ClearColor(g_DisplayPlane[g_CurrentBuffer]);
 
@@ -189,6 +194,9 @@ void GameApp::RenderScene(void)
 	{
 		gfxContext.SetPipelineState(m_PSOs["opaque"]);
 		DrawRenderItems(gfxContext, m_LayerRenders[(int)RenderLayer::Opaque]);
+
+		//gfxContext.SetPipelineState(m_PSOs["opaque"]);
+		//DrawRenderItems(gfxContext, m_LayerRenders[(int)RenderLayer::Picking]);
 	}
 	
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
@@ -251,7 +259,7 @@ void GameApp::BuildRenderItems()
 					x + j * dx, y + i * dy, z + k * dz, 1.0f);
 
 				XMStoreFloat4x4(&skullRitem->inst[index].TexTransform, XMMatrixScaling(2.0f, 2.0f, 1.0f));
-				skullRitem->inst[index].MaterialIndex = index % m_Materials.size();
+				skullRitem->inst[index].MaterialIndex = index % (m_Materials.size()-1);
 			}
 		}
 	}
@@ -264,6 +272,7 @@ void GameApp::BuildRenderItems()
 	pickedRitem->Mat = m_Materials["highlight0"].get();
 	pickedRitem->Geo = m_Geometry["carGeo"].get();
 	pickedRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	pickedRitem->Bound = pickedRitem->Geo->DrawArgs["car"].Bound;
 
 	// Picked triangle is not visible until one is picked.
 	pickedRitem->Visible = false;
@@ -272,7 +281,8 @@ void GameApp::BuildRenderItems()
 	pickedRitem->IndexCount = 0;
 	pickedRitem->StartIndexLocation = 0;
 	pickedRitem->BaseVertexLocation = 0;
-	mPickedRitem = pickedRitem.get();
+
+	mPickedRitem = skullRitem.get();
 
 	m_LayerRenders[(int)RenderLayer::Opaque].push_back(skullRitem.get());
 	m_LayerRenders[(int)RenderLayer::Picking].push_back(pickedRitem.get());
@@ -337,9 +347,6 @@ void GameApp::BuildCarGeometry()
 	geo->m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), sizeof(Vertex), vertices.data());
 	geo->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), sizeof(std::int32_t), indices.data());
 
-	geo->vertices = std::move(vertices);
-	geo->indices = std::move(indices);
-
 	SubmeshGeometry submesh;
 	submesh.IndexCount = (UINT)indices.size();
 	submesh.StartIndexLocation = 0;
@@ -348,6 +355,9 @@ void GameApp::BuildCarGeometry()
 	XMStoreFloat3(&submesh.Bound.Extents, 0.5f * (vMax - vMin));
 
 	geo->DrawArgs["car"] = std::move(submesh);
+
+	geo->vertices = std::move(vertices);
+	geo->indices = std::move(indices);
 
 	m_Geometry["carGeo"] = std::move(geo);
 }
@@ -391,27 +401,27 @@ void GameApp::BuildMaterials()
 	bricks0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 	bricks0->Roughness = 0.1f;
 
-	auto highlight0 = std::make_unique<Material>();
-	highlight0->Name = "highlight0";
-	highlight0->DiffuseMapIndex = 5;
-	highlight0->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	highlight0->FresnelR0 = XMFLOAT3(0.06f, 0.06f, 0.06f);
-	highlight0->Roughness = 0.0f;
-
 	auto skullMat = std::make_unique<Material>();
 	skullMat->Name = "skullMat";
-	skullMat->DiffuseMapIndex = 6;
+	skullMat->DiffuseMapIndex = 5;
 	skullMat->DiffuseAlbedo = XMFLOAT4(0.7f, 0.7f, 0.7f, 1.0f);
 	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
 	skullMat->Roughness = 0.0f;
+
+	auto highlight0 = std::make_unique<Material>();
+	highlight0->Name = "highlight0";
+	highlight0->DiffuseMapIndex = 6;
+	highlight0->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f);
+	highlight0->FresnelR0 = XMFLOAT3(0.06f, 0.06f, 0.06f);
+	highlight0->Roughness = 0.0f;
 
 	m_Materials[grass->Name] = std::move(grass);
 	m_Materials[tile0->Name] = std::move(tile0);
 	m_Materials[water->Name] = std::move(water);
 	m_Materials[stone0->Name] = std::move(stone0);
 	m_Materials[bricks0->Name] = std::move(bricks0);
-	m_Materials[highlight0->Name] = std::move(highlight0);
 	m_Materials[skullMat->Name] = std::move(skullMat);
+	m_Materials[highlight0->Name] = std::move(highlight0);
 
 	std::vector<MaterialConstants> mat;
 	MaterialConstants temp;
@@ -562,4 +572,105 @@ void GameApp::UpdateCamera(float deltaT)
 	BoundingFrustum::CreateFromMatrix(mCamFrustum, camera.GetProjMatrix());
 }
 
+void GameApp::Pick()
+{
+	if (!GameInput::IsPressed(GameInput::kMouse0))
+		return;
+	POINT point = GameInput::GetCurPos();
+	// Make each pixel correspond to a quarter of a degree.
 
+	XMFLOAT4X4 P;
+	XMStoreFloat4x4(&P, camera.GetProjMatrix());
+	// compute picking ray in view sapce
+	float vx = (+0.2 * point.x / g_DisplayWidth  - 1.0f) / P(0,0);
+	float vy = (-0.2 * point.y / g_DisplayHeight + 1.0f) / P(1,1);
+
+	// ray definition in view space
+	XMVECTOR rayOrigin = XMVectorSet(0.0, 0.0, 0.0, 1.0);
+	XMVECTOR rayDir    = XMVectorSet(vx,  vy,  1.0, 0.0);
+
+	XMMATRIX V = camera.GetViewMatrix();
+	auto det = XMMatrixDeterminant(V);
+	XMMATRIX invView = XMMatrixInverse(&det, V);
+
+	// assume nothing is picked to start, so the picked render-item is invisible
+
+	mPickedRitem->Visible = false;
+
+	// check if we pick an opaque render item. A real app might keep a separate "picking list"
+	// of objects that can be selected.
+	for (auto ri : m_LayerRenders[(int)RenderLayer::Opaque])
+	{
+		for (int i = 0; i < ri->InstanceCount; ++i)
+		{
+			auto item = ri->inst[i];
+
+			XMMATRIX W = XMLoadFloat4x4(&item.World);
+			auto det = XMMatrixDeterminant(W);
+			XMMATRIX invWorld = XMMatrixInverse(&det, W);
+			// tranform ray to view space of mesh
+			XMMATRIX toLocal = XMMatrixMultiply(invView, invWorld);
+
+			rayOrigin = XMVector3TransformCoord(rayOrigin, toLocal);
+			rayDir = XMVector3TransformNormal(rayDir, toLocal);
+
+			// make the ray direction unit length for the intersection tests;
+			rayDir = XMVector3Normalize(rayDir);
+
+			// If we hit the bounding box of the Mesh, then we might have picked a Mesh triangle,
+		// so do the ray/triangle tests.
+		//
+		// If we did not hit the bounding box, then it is impossible that we hit 
+		// the Mesh, so do not waste effort doing ray/triangle tests.
+			float tmin = 0.0;
+			if (ri->Bound.Intersects(rayOrigin, rayDir, tmin))
+			{
+				auto vertices = ri->Geo->vertices;
+				auto indices = ri->Geo->indices;
+
+				UINT triCount = ri->IndexCount / 3;
+
+				tmin = INFINITY;
+				for (UINT i = 0; i < triCount; ++i)
+				{
+					// Indices for this triangle.
+					UINT i0 = indices[i * 3 + 0];
+					UINT i1 = indices[i * 3 + 1];
+					UINT i2 = indices[i * 3 + 2];
+
+					// Vertices for this triangle.
+					XMVECTOR v0 = XMLoadFloat3(&vertices[i0].position);
+					XMVECTOR v1 = XMLoadFloat3(&vertices[i1].position);
+					XMVECTOR v2 = XMLoadFloat3(&vertices[i2].position);
+
+					float t = 0.0f;
+					if (TriangleTests::Intersects(rayOrigin, rayDir, v0, v1, v2, t))
+					{
+						// this is the new nearest picked triangle
+						if (t < tmin)
+						{
+							tmin = t;
+							UINT pickedTriangle = i;
+
+							mPickedRitem->Visible = true;
+							mPickedRitem->IndexCount = ri->IndexCount;
+							mPickedRitem->BaseVertexLocation = 0;
+							// offset to the pick triangle in the mesh index buffer;
+							mPickedRitem->StartIndexLocation = 0;
+
+							//Picked render item needs same world matrix as object picked.
+							mPickedRitem->InstanceCount = 1;
+							Instances temp = item;
+
+							temp.MaterialIndex = 6;
+							XMMATRIX m = XMMatrixIdentity() * XMMatrixScaling(1.1, 1.1, 1.1);
+							XMStoreFloat4x4(&temp.World, m);
+							mPickedRitem->inst.resize(1);
+							mPickedRitem->inst[0] = std::move(temp);
+						}
+					}
+				}
+			}
+		}
+	}
+}

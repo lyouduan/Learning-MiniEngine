@@ -76,6 +76,8 @@ private:
 	void UpdateInstanceIndex(float deltaT);
 	void UpdateCamera(float deltaT);
 
+	void Pick();
+
 	RootSignature m_RootSignature;
 
 	std::unordered_map<std::string, GraphicsPSO> m_PSOs;

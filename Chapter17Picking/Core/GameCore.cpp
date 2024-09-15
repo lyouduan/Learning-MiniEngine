@@ -103,6 +103,10 @@ namespace GameCore
         case WM_SIZE:
             break;
 
+        case WM_MOUSEMOVE:
+            GameInput::OnMouseMove(wParam, LOWORD(lParam), HIWORD(lParam));
+            break;
+
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
