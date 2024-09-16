@@ -57,84 +57,8 @@ void GameApp::Startup(void)
 	BuildShapeRenderItems();
 	BuildSkyboxRenderItems();
 
-	// initialize root signature
-	m_RootSignature.Reset(5, 1);
-	m_RootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL);
-	m_RootSignature[1].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_ALL);
-	m_RootSignature[2].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_ALL, 1);
-	m_RootSignature[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1);
-	m_RootSignature[4].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, m_srvs.size());
-	// sampler
-	m_RootSignature.InitStaticSampler(0, Graphics::SamplerLinearWrapDesc, D3D12_SHADER_VISIBILITY_PIXEL);
-
-	m_RootSignature.Finalize(L"root sinature", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-	
-	// shader input layout
-	D3D12_INPUT_ELEMENT_DESC mInputLayout[] =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-	};
-
-	DXGI_FORMAT ColorFormat = g_DisplayPlane[g_CurrentBuffer].GetFormat();
-	DXGI_FORMAT DepthFormat = g_SceneDepthBuffer.GetFormat();
-
-	// shader 
-	ComPtr<ID3DBlob> vertexBlob;
-	ComPtr<ID3DBlob> pixelBlob;
-	D3DReadFileToBlob(L"shader/VertexShader.cso", &vertexBlob);
-	D3DReadFileToBlob(L"shader/PixelShader.cso", &pixelBlob);
-
-	// PSO
-	GraphicsPSO opaquePSO;
-	opaquePSO.SetRootSignature(m_RootSignature);
-	opaquePSO.SetRasterizerState(RasterizerDefaultCCw); // yz
-	opaquePSO.SetBlendState(BlendDisable);
-	opaquePSO.SetDepthStencilState(DepthStateReadWriteRZ);// reversed-z
-	opaquePSO.SetInputLayout(_countof(mInputLayout), mInputLayout);
-	opaquePSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-	opaquePSO.SetRenderTargetFormat(ColorFormat, DepthFormat);
-	opaquePSO.SetVertexShader(vertexBlob);
-	opaquePSO.SetPixelShader(pixelBlob);
-	opaquePSO.Finalize();
-	m_PSOs["opaque"] = opaquePSO;
-
-	GraphicsPSO transpacrentPSO = opaquePSO;
-	auto blend = Graphics::BlendTraditional;
-	blend.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-	transpacrentPSO.SetBlendState(blend);
-	transpacrentPSO.Finalize();
-	m_PSOs["transparent"] = transpacrentPSO;
-
-	GraphicsPSO alphaTestedPSO = opaquePSO;
-	auto rater = RasterizerDefault;
-	rater.CullMode = D3D12_CULL_MODE_NONE; // not cull 
-	alphaTestedPSO.SetRasterizerState(rater);
-	alphaTestedPSO.Finalize();
-	m_PSOs["alphaTested"] = alphaTestedPSO;
-
-
-	// cubemap 
-
-	// shader 
-	ComPtr<ID3DBlob> skyboxVS;
-	ComPtr<ID3DBlob> skyboxPS;
-	D3DReadFileToBlob(L"shader/skyboxVS.cso", &skyboxVS);
-	D3DReadFileToBlob(L"shader/skyboxPS.cso", &skyboxPS);
-	
-	// pso
-	GraphicsPSO cubemapPSO = opaquePSO;
-	auto depthDesc = DepthStateReadWriteRZ;
-	depthDesc.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL; // 大于等于
-
-	rater.CullMode = D3D12_CULL_MODE_NONE; // 禁止
-	cubemapPSO.SetDepthStencilState(depthDesc);
-	cubemapPSO.SetRasterizerState(rater);
-	cubemapPSO.SetVertexShader(skyboxVS);
-	cubemapPSO.SetPixelShader(skyboxPS);
-	cubemapPSO.Finalize();
-	m_PSOs["sky"] = cubemapPSO;
+	// set PSO and Root Signature
+	SetPsoAndRootSig();
 }
 
 void GameApp::Cleanup(void)
@@ -215,6 +139,8 @@ void GameApp::RenderScene(void)
 	gfxContext.SetBufferSRV(2, matBuffer);
 
 	// srv tables
+	gfxContext.SetDynamicDescriptor(3, 0, m_cubeMap[0].GetSRV());
+
 	gfxContext.SetDynamicDescriptors(4, 0, m_srvs.size(), &m_srvs[0]);
 
 	// draw call
@@ -236,14 +162,95 @@ void GameApp::RenderScene(void)
 	}
 	 
 	// draw sky box at last
-	gfxContext.SetDynamicDescriptor(3, 0, m_cubeMap[0].GetSRV());
-
 	gfxContext.SetPipelineState(m_PSOs["sky"]);
 	DrawRenderItems(gfxContext, m_SkyboxRenders[(int)RenderLayer::Skybox]);
+
 
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
 
 	gfxContext.Finish();
+}
+
+void GameApp::SetPsoAndRootSig()
+{
+	// initialize root signature
+	m_RootSignature.Reset(5, 1);
+	m_RootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL);
+	m_RootSignature[1].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_ALL);
+	m_RootSignature[2].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_ALL, 1);
+	m_RootSignature[3].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1);
+	m_RootSignature[4].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, m_srvs.size());
+	// sampler
+	m_RootSignature.InitStaticSampler(0, Graphics::SamplerLinearWrapDesc, D3D12_SHADER_VISIBILITY_PIXEL);
+
+	m_RootSignature.Finalize(L"root sinature", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	// shader input layout
+	D3D12_INPUT_ELEMENT_DESC mInputLayout[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+
+	DXGI_FORMAT ColorFormat = g_DisplayPlane[g_CurrentBuffer].GetFormat();
+	DXGI_FORMAT DepthFormat = g_SceneDepthBuffer.GetFormat();
+
+	// shader 
+	ComPtr<ID3DBlob> vertexBlob;
+	ComPtr<ID3DBlob> pixelBlob;
+	D3DReadFileToBlob(L"shader/VertexShader.cso", &vertexBlob);
+	D3DReadFileToBlob(L"shader/PixelShader.cso", &pixelBlob);
+
+	// PSO
+	GraphicsPSO opaquePSO;
+	opaquePSO.SetRootSignature(m_RootSignature);
+	opaquePSO.SetRasterizerState(RasterizerDefaultCCw); // yz
+	opaquePSO.SetBlendState(BlendDisable);
+	opaquePSO.SetDepthStencilState(DepthStateReadWriteRZ);// reversed-z
+	opaquePSO.SetInputLayout(_countof(mInputLayout), mInputLayout);
+	opaquePSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	opaquePSO.SetRenderTargetFormat(ColorFormat, DepthFormat);
+	opaquePSO.SetVertexShader(vertexBlob);
+	opaquePSO.SetPixelShader(pixelBlob);
+	opaquePSO.Finalize();
+	m_PSOs["opaque"] = opaquePSO;
+
+	GraphicsPSO transpacrentPSO = opaquePSO;
+	auto blend = Graphics::BlendTraditional;
+	blend.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+	transpacrentPSO.SetBlendState(blend);
+	transpacrentPSO.Finalize();
+	m_PSOs["transparent"] = transpacrentPSO;
+
+	GraphicsPSO alphaTestedPSO = opaquePSO;
+	auto rater = RasterizerDefault;
+	rater.CullMode = D3D12_CULL_MODE_NONE; // not cull 
+	alphaTestedPSO.SetRasterizerState(rater);
+	alphaTestedPSO.Finalize();
+	m_PSOs["alphaTested"] = alphaTestedPSO;
+
+
+	// cubemap 
+
+	// shader 
+	ComPtr<ID3DBlob> skyboxVS;
+	ComPtr<ID3DBlob> skyboxPS;
+	D3DReadFileToBlob(L"shader/skyboxVS.cso", &skyboxVS);
+	D3DReadFileToBlob(L"shader/skyboxPS.cso", &skyboxPS);
+
+	// pso
+	GraphicsPSO cubemapPSO = opaquePSO;
+	auto depthDesc = DepthStateReadWriteRZ;
+	depthDesc.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL; // 大于等于
+
+	rater.CullMode = D3D12_CULL_MODE_NONE; // 禁止
+	cubemapPSO.SetDepthStencilState(depthDesc);
+	cubemapPSO.SetRasterizerState(rater);
+	cubemapPSO.SetVertexShader(skyboxVS);
+	cubemapPSO.SetPixelShader(skyboxPS);
+	cubemapPSO.Finalize();
+	m_PSOs["sky"] = cubemapPSO;
 }
 
 void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderItem*>& items)
@@ -343,8 +350,8 @@ void GameApp::BuildShapeRenderItems()
 
 		leftSphereRitem->World = leftSphereWorld;
 		leftSphereRitem->TexTransform = brickTexTransform;
-		leftSphereRitem->ObjCBIndex = 3;
-		leftSphereRitem->Mat = m_Materials["stone0"].get();
+		leftSphereRitem->ObjCBIndex = 7;
+		leftSphereRitem->Mat = m_Materials["mirror0"].get();
 		leftSphereRitem->Geo = m_Geometry["shapeGeo"].get();
 		leftSphereRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		leftSphereRitem->IndexCount = leftSphereRitem->Geo->DrawArgs["sphere"].IndexCount;
@@ -353,8 +360,8 @@ void GameApp::BuildShapeRenderItems()
 
 		rightSphereRitem->World = rightSphereWorld;
 		rightSphereRitem->TexTransform = brickTexTransform;
-		rightSphereRitem->ObjCBIndex = 3;
-		rightSphereRitem->Mat = m_Materials["stone0"].get();
+		rightSphereRitem->ObjCBIndex = 7;
+		rightSphereRitem->Mat = m_Materials["mirror0"].get();
 		rightSphereRitem->Geo = m_Geometry["shapeGeo"].get();
 		rightSphereRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		rightSphereRitem->IndexCount = rightSphereRitem->Geo->DrawArgs["sphere"].IndexCount;
@@ -770,9 +777,16 @@ void GameApp::BuildMaterials()
 	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
 	skullMat->Roughness = 0.3f;
 
+	auto mirror0 = std::make_unique<Material>();
+	mirror0->Name = "mirror0";
+	mirror0->DiffuseMapIndex = 7;
+	mirror0->DiffuseAlbedo = XMFLOAT4(0.0f, 0.0f, 0.1f, 1.0f);
+	mirror0->FresnelR0 = XMFLOAT3(0.98f, 0.97f, 0.95f);
+	mirror0->Roughness = 0.1f;
+
 	auto sky = std::make_unique<Material>();
 	sky->Name = "sky";
-	sky->DiffuseMapIndex = 7;
+	sky->DiffuseMapIndex = 8;
 	sky->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	sky->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
 	sky->Roughness = 1.0f;
@@ -784,6 +798,7 @@ void GameApp::BuildMaterials()
 	m_Materials[bricks0->Name] = std::move(bricks0);
 	m_Materials[wirefence->Name] = std::move(wirefence);
 	m_Materials[skullMat->Name] = std::move(skullMat);
+	m_Materials[mirror0->Name] = std::move(mirror0);
 	m_Materials[sky->Name] = std::move(sky);
 
 	std::vector<MaterialConstants> mat;
@@ -836,6 +851,10 @@ void GameApp::LoadTextures()
 	TextureRef white1x1Tex = TextureManager::LoadDDSFromFile(L"white1x1.dds");
 	if (white1x1Tex.IsValid())
 		m_Textures.push_back(white1x1Tex);
+
+	TextureRef iceTex = TextureManager::LoadDDSFromFile(L"ice.dds");
+	if (iceTex.IsValid())
+		m_Textures.push_back(iceTex);
 
 	TextureRef cubeMap = TextureManager::LoadDDSFromFile(L"snowcube1024.dds");
 	if (cubeMap.IsValid())

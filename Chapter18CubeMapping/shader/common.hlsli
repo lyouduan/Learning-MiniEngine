@@ -55,7 +55,7 @@ ConstantBuffer<ObjConstants> objConstants : register(b0);
 ConstantBuffer<PassConstants> passConstants : register(b1);
 
 TextureCube gCubeMap : register(t0);
-Texture2D gDiffuseMap[7] : register(t1);
+Texture2D gDiffuseMap[8] : register(t1);
 // structured buffer
 StructuredBuffer<MaterialData> gMaterialData : register(t0, space1);
 

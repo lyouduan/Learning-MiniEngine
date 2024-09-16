@@ -59,6 +59,8 @@ public:
 
 private:
 
+	void SetPsoAndRootSig();
+
 	void DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderItem*>& items);
 
 	void BuildLandRenderItems();

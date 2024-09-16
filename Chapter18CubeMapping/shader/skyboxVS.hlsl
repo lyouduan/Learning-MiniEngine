@@ -16,6 +16,5 @@ VertexOut main(VertexIn vin)
     // reversed-z: far plane = 0.0f
     vout.positionH.z = 0;
     
-    
     return vout;
 }
