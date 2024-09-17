@@ -34,7 +34,7 @@ float4 main(VertexOut input) : SV_TARGET
     
     float4 litColor = ambient + directLight;
     
-    
+    // reflection 
     float3 r = reflect(-toEyeW, input.normal);
     float4 reflectionColor = gCubeMap.Sample(gsamLinearClamp, r);
     float3 fresnelFactor = SchlickFresnel(fresnelR0, input.normal, r);

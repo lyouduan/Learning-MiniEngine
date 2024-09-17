@@ -80,36 +80,23 @@ void GameApp::Update(float deltaT)
 	// update waves
 	UpdateWaves(deltaT);
 
+	UpdatePassCB(deltaT);
 
+	totalTime += deltaT * 0.1;
+	// animate the skull around the center sphere
+	XMMATRIX skullScale = XMMatrixScaling(0.2f, 0.2f, 0.2f);
+	XMMATRIX skullOffset = XMMatrixTranslation(3.0f, 2.0f, 0.0f);
+	// 自转：不偏移
+	XMMATRIX skullLocalRotate = XMMatrixRotationY(2.0f * totalTime);
+	// 绕着场景中心转：加上偏移量
+	XMMATRIX skullGlobalRotate = XMMatrixRotationY(0.5f * totalTime);
+
+	m_SkullRitem->World = skullScale * skullLocalRotate * skullOffset * skullGlobalRotate;
+
+	// switch the scene
 	if (GameInput::IsFirstPressed(GameInput::kKey_f1))
 		m_bRenderShapes = !m_bRenderShapes;
 
-	
-	m_View = camera.GetViewMatrix();
-	m_Projection = camera.GetProjMatrix();
-
-	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(camera.GetViewProjMatrix())); // hlsl 列主序矩阵
-
-	// light
-	XMVECTOR lightDir = -DirectX::XMVectorSet(
-		1.0f * sinf(mSunTheta) * cosf(mSunTheta),
-		1.0f * cosf(mSunTheta),
-		1.0f * sinf(mSunTheta) * sinf(mSunTheta),
-		1.0f);
-	XMStoreFloat3(&passConstant.Lights[0].Direction, lightDir);
-	passConstant.Lights[0].Strength = { 0.9f, 0.9f, 0.9f };
-	passConstant.Lights[0].FalloffEnd = 100.0;
-	passConstant.Lights[0].Position = { 0.0f, 10.0f, -10.0f };
-	passConstant.ambientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
-
-	XMStoreFloat3(&passConstant.eyePosW, camera.GetPosition());
-
-	passConstant.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
-	passConstant.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
-
-	passConstant.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
-	passConstant.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
-	
 }
 
 void GameApp::RenderScene(void)
@@ -308,11 +295,24 @@ void GameApp::BuildShapeRenderItems()
 	skullRitem->IndexCount = skullRitem->Geo->DrawArgs["skull"].IndexCount;
 	skullRitem->StartIndexLocation = skullRitem->Geo->DrawArgs["skull"].StartIndexLocation;
 	skullRitem->BaseVertexLocation = skullRitem->Geo->DrawArgs["skull"].BaseVertexLocation;
+	m_SkullRitem = skullRitem.get();
 	m_ShapeRenders[(int)RenderLayer::Opaque].push_back(skullRitem.get());
+
+	auto globeRitem = std::make_unique<RenderItem>();
+	globeRitem->World = XMMatrixIdentity()* XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 2.0f, 0.0f);
+	globeRitem->ObjCBIndex = 7;
+	globeRitem->Mat = m_Materials["mirror0"].get();
+	globeRitem->Geo = m_Geometry["shapeGeo"].get();
+	globeRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	globeRitem->IndexCount = globeRitem->Geo->DrawArgs["sphere"].IndexCount;
+	globeRitem->StartIndexLocation = globeRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
+	globeRitem->BaseVertexLocation = globeRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+	m_ShapeRenders[(int)RenderLayer::OpaqueDynamicReflectors].push_back(globeRitem.get());
 
 	m_AllRenders.push_back(std::move(boxRitem));
 	m_AllRenders.push_back(std::move(gridRitem));
 	m_AllRenders.push_back(std::move(skullRitem));
+	m_AllRenders.push_back(std::move(globeRitem));
 
 	XMMATRIX brickTexTransform = XMMatrixScaling(1.0f, 1.0f, 1.0f);
 	for (int i = 0; i < 5; ++i)
@@ -866,6 +866,30 @@ void GameApp::LoadTextures()
 	for (auto& t : m_Textures)
 		m_srvs.push_back(t.GetSRV());
 
+}
+void GameApp::UpdatePassCB(float deltaT)
+{
+	// up
+	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(camera.GetViewProjMatrix())); // hlsl 列主序矩阵
+	// light
+	XMVECTOR lightDir = -DirectX::XMVectorSet(
+		1.0f * sinf(mSunTheta) * cosf(mSunTheta),
+		1.0f * cosf(mSunTheta),
+		1.0f * sinf(mSunTheta) * sinf(mSunTheta),
+		1.0f);
+	XMStoreFloat3(&passConstant.Lights[0].Direction, lightDir);
+	passConstant.Lights[0].Strength = { 0.9f, 0.9f, 0.9f };
+	passConstant.Lights[0].FalloffEnd = 100.0;
+	passConstant.Lights[0].Position = { 0.0f, 10.0f, -10.0f };
+	passConstant.ambientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
+
+	XMStoreFloat3(&passConstant.eyePosW, camera.GetPosition());
+
+	passConstant.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
+	passConstant.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
+
+	passConstant.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
+	passConstant.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
 }
 
 void GameApp::UpdateCamera(float deltaT)

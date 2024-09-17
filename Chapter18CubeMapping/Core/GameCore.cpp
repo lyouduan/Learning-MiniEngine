@@ -28,9 +28,9 @@ namespace GameCore
 
     void UpdateApplication(IGameApp& game)
     {
-        game.Update(0.01);
+        game.Update(0.1);
         game.RenderScene();
-        GameInput::Update(0.01);
+        GameInput::Update(0.1);
 
         Display::Present();
     }

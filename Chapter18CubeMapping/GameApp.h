@@ -16,6 +16,7 @@ enum class RenderLayer : int
 	Opaque = 0,
 	AlphaTested,
 	Transparent,
+	OpaqueDynamicReflectors,
 	Skybox,
 	Count
 };
@@ -75,13 +76,14 @@ private:
 
 	float GetHillsHeight(float x, float z)const;
 	DirectX::XMFLOAT3 GetHillsNormal(float x, float z)const;
-	void UpdateWaves(float deltaT);
-	void AnimateMaterials(float deltaT);
-
+	
 	void BuildMaterials();
 	void LoadTextures();
 
+	void UpdatePassCB(float deltaT);
 	void UpdateCamera(float deltaT);
+	void UpdateWaves(float deltaT);
+	void AnimateMaterials(float deltaT);
 
 	RootSignature m_RootSignature;
 
@@ -94,6 +96,9 @@ private:
 	std::unique_ptr<Waves> mWaves;
 	RenderItem* m_WavesRitem;
 	std::vector<Vertex> m_VerticesWaves;
+
+	// skull
+	RenderItem* m_SkullRitem;
 
 	// List of all the render items.
 	std::vector <RenderItem*> m_ShapeRenders[(int)RenderLayer::Count];
@@ -121,6 +126,8 @@ private:
 
 	PassConstants passConstant;
 	StructuredBuffer matBuffer;
+
+	float totalTime = 0;
 
 	// camera
 	Math::Camera camera;
