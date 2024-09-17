@@ -63,6 +63,9 @@ private:
 	void SetPsoAndRootSig();
 
 	void DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderItem*>& items);
+	void DrawSceneToCubeMap(GraphicsContext& gfxContext);
+
+	void BuildCubeFaceCamera(float x=0.0, float y=0.0, float z=0.0);
 
 	void BuildLandRenderItems();
 	void BuildShapeRenderItems();
@@ -131,6 +134,8 @@ private:
 
 	// camera
 	Math::Camera camera;
+	// cubeMap camera
+	Math::Camera cubeCamera[6];
 
 	float m_radius = 5.0f;
 	// x方向弧度

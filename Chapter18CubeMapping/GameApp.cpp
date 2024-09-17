@@ -57,6 +57,9 @@ void GameApp::Startup(void)
 	BuildShapeRenderItems();
 	BuildSkyboxRenderItems();
 
+	// build cubemap camera
+	BuildCubeFaceCamera(0.0, 2.0, 0.0);
+
 	// set PSO and Root Signature
 	SetPsoAndRootSig();
 }
@@ -71,12 +74,14 @@ void GameApp::Cleanup(void)
 
 	m_Materials.clear();
 	m_Textures.clear();
+	m_Geometry.clear();
 }
 
 void GameApp::Update(float deltaT)
 {
 	// update camera 
 	UpdateCamera(deltaT);
+
 	// update waves
 	UpdateWaves(deltaT);
 
@@ -103,6 +108,10 @@ void GameApp::RenderScene(void)
 {
 	GraphicsContext& gfxContext = GraphicsContext::Begin(L"Scene Render");
 
+	// draw cubemap
+	DrawSceneToCubeMap(gfxContext);
+
+	// reset viewport and scissor
 	gfxContext.SetViewportAndScissor(m_Viewport, m_Scissor);
 
 	gfxContext.TransitionResource(g_DisplayPlane[g_CurrentBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
@@ -111,7 +120,7 @@ void GameApp::RenderScene(void)
 	// clear dsv
 	gfxContext.ClearDepthAndStencil(g_SceneDepthBuffer);
 	// clear rtv
-	g_DisplayPlane[g_CurrentBuffer].SetClearColor(Color(passConstant.fogColor.x, passConstant.fogColor.y, passConstant.fogColor.z, passConstant.fogColor.w));
+	g_DisplayPlane[g_CurrentBuffer].SetClearColor(Color(0.2, 0.2, 0.2, 1.0f));
 
 	gfxContext.ClearColor(g_DisplayPlane[g_CurrentBuffer]);
 
@@ -120,14 +129,14 @@ void GameApp::RenderScene(void)
 
 	gfxContext.SetRootSignature(m_RootSignature);
 
+	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(camera.GetViewProjMatrix()));
+	XMStoreFloat3(&passConstant.eyePosW, camera.GetPosition());
 	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
 	// structured buffer
 	gfxContext.SetBufferSRV(2, matBuffer);
 
 	// srv tables
-	gfxContext.SetDynamicDescriptor(3, 0, m_cubeMap[0].GetSRV());
-
 	gfxContext.SetDynamicDescriptors(4, 0, m_srvs.size(), &m_srvs[0]);
 
 	// draw call
@@ -147,9 +156,15 @@ void GameApp::RenderScene(void)
 		gfxContext.SetPipelineState(m_PSOs["alphaTested"]);
 		DrawRenderItems(gfxContext, m_LandRenders[(int)RenderLayer::AlphaTested]);
 	}
-	 
+	
+	// dynamic cube mapping
+	gfxContext.SetPipelineState(m_PSOs["opaque"]);
+	gfxContext.SetDynamicDescriptor(3, 0, g_SceneCubeMapBuffer.GetSRV());
+	DrawRenderItems(gfxContext, m_ShapeRenders[(int)RenderLayer::OpaqueDynamicReflectors]);
+
 	// draw sky box at last
 	gfxContext.SetPipelineState(m_PSOs["sky"]);
+	gfxContext.SetDynamicDescriptor(3, 0, m_cubeMap[0].GetSRV());
 	DrawRenderItems(gfxContext, m_SkyboxRenders[(int)RenderLayer::Skybox]);
 
 
@@ -217,7 +232,6 @@ void GameApp::SetPsoAndRootSig()
 	alphaTestedPSO.Finalize();
 	m_PSOs["alphaTested"] = alphaTestedPSO;
 
-
 	// cubemap 
 
 	// shader 
@@ -257,6 +271,93 @@ void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderIte
 		gfxContext.SetDynamicConstantBufferView(0, sizeof(objConstants), &objConstants);
 
 		gfxContext.DrawIndexedInstanced(iter->IndexCount, 1, iter->StartIndexLocation, iter->BaseVertexLocation, 0);
+	}
+}
+
+void GameApp::DrawSceneToCubeMap(GraphicsContext& gfxContext)
+{
+	gfxContext.SetViewport(m_Viewport);
+	gfxContext.SetScissor(m_Scissor);
+
+	gfxContext.TransitionResource(g_SceneCubeMapBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	gfxContext.TransitionResource(g_CubeMapDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+
+	
+
+	//clear rtv
+	g_SceneCubeMapBuffer.SetClearColor(Color(0.0f, 0.0f, 0.0f, 0.0f));
+	gfxContext.ClearColor(g_SceneCubeMapBuffer);
+
+	gfxContext.SetRootSignature(m_RootSignature);
+
+	// structured buffer
+	gfxContext.SetBufferSRV(2, matBuffer);
+
+	// srv tables
+	gfxContext.SetDynamicDescriptor(3, 0, m_cubeMap[0].GetSRV());
+	gfxContext.SetDynamicDescriptors(4, 0, m_srvs.size(), &m_srvs[0]);
+
+	for (int i = 0; i < 6; ++i)
+	{
+		// clear dsv
+		gfxContext.ClearDepthAndStencil(g_CubeMapDepthBuffer);
+		// set render target
+		gfxContext.SetRenderTarget(g_SceneCubeMapBuffer.GetRTV(i), g_CubeMapDepthBuffer.GetDSV());
+
+		// update passCB
+		XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(cubeCamera[i].GetViewProjMatrix()));
+		XMStoreFloat3(&passConstant.eyePosW, cubeCamera[i].GetPosition());
+		gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
+
+		// draw call
+		gfxContext.SetPipelineState(m_PSOs["opaque"]);
+		DrawRenderItems(gfxContext, m_ShapeRenders[(int)RenderLayer::Opaque]);
+		// draw sky box at last
+		gfxContext.SetPipelineState(m_PSOs["sky"]);
+		DrawRenderItems(gfxContext, m_SkyboxRenders[(int)RenderLayer::Skybox]);
+
+	}
+
+	gfxContext.TransitionResource(g_SceneCubeMapBuffer, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+}
+
+void GameApp::BuildCubeFaceCamera(float x, float y, float z)
+{
+	// Generate the cube map about the given position.
+	XMVECTOR center{ x, y, z };
+
+	// look along each coordinate axis;
+	Math::Vector3 targets[6] =
+	{
+		{x + 1.0f, y + 0.0f, z + 0.0f}, // +X
+		{x - 1.0f, y + 0.0f, z + 0.0f}, // -X
+		{x + 0.0f, y + 1.0f, z + 0.0f}, // +Y
+		{x + 0.0f, y - 1.0f, z + 0.0f}, // -Y
+		{x + 0.0f, y + 0.0f, z + 1.0f}, // +Z
+		{x + 0.0f, y + 0.0f, z - 1.0f}, // -Z
+	};
+
+	// Use world up vector (0,1,0) for all directions except +Y/-Y.  In these cases, we
+	// are looking down +Y or -Y, so we need a different "up" vector.
+	Math::Vector3 ups[6] =
+	{
+		{ +0.0f, +1.0f, +0.0f },    // +X
+		{ +0.0f, +1.0f, +0.0f },    // -X
+		{ +0.0f, +0.0f, -1.0f },    // +Y
+		{ +0.0f, +0.0f, +1.0f },    // -Y
+		{ +0.0f, +1.0f, +0.0f },    // +Z
+		{ +0.0f, +1.0f, +0.0f }     // -Z
+	};
+
+	for (int i = 0; i < 6; ++i)
+	{
+		cubeCamera[i].SetEyeAtUp(
+			{ x,y,z },
+			targets[i],
+			ups[i]
+		);
+		cubeCamera[i].SetPerspectiveMatrix(XM_PIDIV2, 1.0, 0.1, 1000.0f); // 45
+		cubeCamera[i].Update();
 	}
 }
 
@@ -867,10 +968,12 @@ void GameApp::LoadTextures()
 		m_srvs.push_back(t.GetSRV());
 
 }
+
 void GameApp::UpdatePassCB(float deltaT)
 {
 	// up
 	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(camera.GetViewProjMatrix())); // hlsl 列主序矩阵
+
 	// light
 	XMVECTOR lightDir = -DirectX::XMVectorSet(
 		1.0f * sinf(mSunTheta) * cosf(mSunTheta),

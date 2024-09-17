@@ -120,6 +120,9 @@
     <ClCompile Include="GameApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Core\Resource\CubeMapBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Command\CommandAllocatorPool.h">
@@ -267,6 +270,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GameApp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Resource\CubeMapBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

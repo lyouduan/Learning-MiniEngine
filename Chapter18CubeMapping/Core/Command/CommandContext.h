@@ -8,6 +8,7 @@
 #include "DepthBuffer.h"
 #include "LinearAllocator.h"
 #include "DynamicDescriptorHeap.h"
+#include "CubeMapBuffer.h"
 
 #include <queue>
 
@@ -167,6 +168,7 @@ public:
 	}
 
 	void ClearColor(ColorBuffer& Target, D3D12_RECT* Rect = nullptr);
+	void ClearColor(CubeMapBuffer& Target, D3D12_RECT* Rect = nullptr);
 	void ClearColor(ColorBuffer& Target, float Colour[4], D3D12_RECT* Rect = nullptr);
 	void ClearDepth(DepthBuffer& Target);
 	void ClearStencil(DepthBuffer& Target);

@@ -422,7 +422,12 @@ void GraphicsContext::ClearColor(ColorBuffer& Target, D3D12_RECT* Rect)
     FlushResourceBarriers();
     m_CommandList->ClearRenderTargetView(Target.GetRTV(), Target.GetClearColor().GetPtr(), (Rect == nullptr) ? 0 : 1, Rect);
 }
-
+void GraphicsContext::ClearColor(CubeMapBuffer& Target, D3D12_RECT* Rect)
+{
+    FlushResourceBarriers();
+    for(int i = 0; i < 6; i++)
+        m_CommandList->ClearRenderTargetView(Target.GetRTV(i), Target.GetClearColor().GetPtr(), (Rect == nullptr) ? 0 : 1, Rect);
+}
 void GraphicsContext::ClearColor(ColorBuffer& Target, float Colour[4], D3D12_RECT* Rect)
 {
     FlushResourceBarriers();

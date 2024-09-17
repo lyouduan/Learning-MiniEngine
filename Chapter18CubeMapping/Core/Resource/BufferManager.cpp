@@ -10,6 +10,9 @@ namespace Graphics
 	// reverse-z
 	// set the clear value as 0.0 on far plane, 1.0 is the near plane in DNC
 	DepthBuffer g_SceneDepthBuffer(0.0, 0);
+	DepthBuffer g_CubeMapDepthBuffer(0.0, 0);
+
+	CubeMapBuffer g_SceneCubeMapBuffer;
 }
 
 #define T2X_COLOR_FORMAT DXGI_FORMAT_R10G10B10A2_UNORM
@@ -18,6 +21,9 @@ namespace Graphics
 
 void Graphics::InitializeRenderingBuffers(uint32_t width, uint32_t height)
 {
+	g_SceneCubeMapBuffer.Create(L"Cubemap Buffer", width, height, 1, T2X_COLOR_FORMAT);
+	g_CubeMapDepthBuffer.Create(L"Cubemap Depth Buffer", width, height, DSV_FORMAT);
+
 	g_SceneDepthBuffer.Create(L"Scene Depth Buffer", width, height, DSV_FORMAT);
 }
 
@@ -27,5 +33,8 @@ void Graphics::ResizeDisplayDependentBuffers(uint32_t NativeWidth, uint32_t Nati
 
 void Graphics::DestroyRenderingBuffers()
 {
+	g_SceneCubeMapBuffer.Destroy();
+	g_CubeMapDepthBuffer.Destroy();
+
 	g_SceneDepthBuffer.Destroy();
 }
