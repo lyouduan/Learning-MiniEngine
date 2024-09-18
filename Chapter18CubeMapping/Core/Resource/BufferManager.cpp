@@ -21,8 +21,8 @@ namespace Graphics
 
 void Graphics::InitializeRenderingBuffers(uint32_t width, uint32_t height)
 {
-	g_SceneCubeMapBuffer.Create(L"Cubemap Buffer", width, height, 1, T2X_COLOR_FORMAT);
-	g_CubeMapDepthBuffer.Create(L"Cubemap Depth Buffer", width, height, DSV_FORMAT);
+	g_SceneCubeMapBuffer.Create(L"Cubemap Buffer", 512, 512, 1, T2X_COLOR_FORMAT);
+	g_CubeMapDepthBuffer.Create(L"Cubemap Depth Buffer", 512, 512, DSV_FORMAT);
 
 	g_SceneDepthBuffer.Create(L"Scene Depth Buffer", width, height, DSV_FORMAT);
 }

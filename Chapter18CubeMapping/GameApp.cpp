@@ -276,13 +276,14 @@ void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderIte
 
 void GameApp::DrawSceneToCubeMap(GraphicsContext& gfxContext)
 {
-	gfxContext.SetViewport(m_Viewport);
-	gfxContext.SetScissor(m_Scissor);
+	auto width = Graphics::g_SceneCubeMapBuffer.GetWidth();
+	auto height = Graphics::g_SceneCubeMapBuffer.GetHeight();
+	D3D12_VIEWPORT mViewport = { 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
+	D3D12_RECT mScissorRect = { 0, 0, (LONG)width, (LONG)height };
+	gfxContext.SetViewportAndScissor(mViewport, mScissorRect);
 
 	gfxContext.TransitionResource(g_SceneCubeMapBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 	gfxContext.TransitionResource(g_CubeMapDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
-
-	
 
 	//clear rtv
 	g_SceneCubeMapBuffer.SetClearColor(Color(0.0f, 0.0f, 0.0f, 0.0f));
@@ -324,7 +325,7 @@ void GameApp::DrawSceneToCubeMap(GraphicsContext& gfxContext)
 void GameApp::BuildCubeFaceCamera(float x, float y, float z)
 {
 	// Generate the cube map about the given position.
-	XMVECTOR center{ x, y, z };
+	Math::Vector3 center{ x, y, -z };
 
 	// look along each coordinate axis;
 	Math::Vector3 targets[6] =
@@ -333,8 +334,9 @@ void GameApp::BuildCubeFaceCamera(float x, float y, float z)
 		{x - 1.0f, y + 0.0f, z + 0.0f}, // -X
 		{x + 0.0f, y + 1.0f, z + 0.0f}, // +Y
 		{x + 0.0f, y - 1.0f, z + 0.0f}, // -Y
-		{x + 0.0f, y + 0.0f, z + 1.0f}, // +Z
 		{x + 0.0f, y + 0.0f, z - 1.0f}, // -Z
+		{x + 0.0f, y + 0.0f, z + 1.0f}, // +Z
+
 	};
 
 	// Use world up vector (0,1,0) for all directions except +Y/-Y.  In these cases, we
@@ -343,20 +345,20 @@ void GameApp::BuildCubeFaceCamera(float x, float y, float z)
 	{
 		{ +0.0f, +1.0f, +0.0f },    // +X
 		{ +0.0f, +1.0f, +0.0f },    // -X
-		{ +0.0f, +0.0f, -1.0f },    // +Y
 		{ +0.0f, +0.0f, +1.0f },    // -Y
+		{ +0.0f, +0.0f, -1.0f },    // +Y
+		{ +0.0f, +1.0f, +0.0f },    // -Z
 		{ +0.0f, +1.0f, +0.0f },    // +Z
-		{ +0.0f, +1.0f, +0.0f }     // -Z
 	};
 
 	for (int i = 0; i < 6; ++i)
 	{
 		cubeCamera[i].SetEyeAtUp(
-			{ x,y,z },
+			center,
 			targets[i],
 			ups[i]
 		);
-		cubeCamera[i].SetPerspectiveMatrix(XM_PIDIV2, 1.0, 0.1, 1000.0f); // 45
+		cubeCamera[i].SetPerspectiveMatrix(XM_PI*0.5f, 1, 0.1, 1000.0f); // 45
 		cubeCamera[i].Update();
 	}
 }
