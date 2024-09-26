@@ -62,7 +62,7 @@ void GameApp::Startup(void)
 	BuildCubeFaceCamera(0.0, 2.0, 0.0);
 
 	// create shadowMap
-	m_shadowMap = std::make_unique<ShadowMap>(512, 512, DXGI_FORMAT_D32_FLOAT);
+	m_shadowMap = std::make_unique<ShadowMap>(1024, 1024, DXGI_FORMAT_D32_FLOAT);
 
 	// set PSO and Root Signature
 	SetPsoAndRootSig();

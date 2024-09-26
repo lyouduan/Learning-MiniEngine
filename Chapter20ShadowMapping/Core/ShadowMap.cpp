@@ -53,6 +53,7 @@ void ShadowMap::SetToLightSpaceView(DirectX::XMFLOAT3 _lightDir, DirectX::Boundi
 			0.0f, 0.0f, 1.0f, 0.0f,
 			0.5f, 0.5f, 0.0f, 1.0f);
 
+	// 将世界坐标的点，转换到阴影贴图的纹理坐标空间
 	m_ShadowTransform = m_LightView * m_LightProjection * T;
 }
 

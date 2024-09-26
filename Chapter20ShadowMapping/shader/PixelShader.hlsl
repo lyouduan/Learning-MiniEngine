@@ -5,9 +5,38 @@ float CalcShadowFactor(float4 shadowPosH)
 {
     shadowPosH.xyz /= shadowPosH.w;
     
-    float depth = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy).r;
+    float curDepth = shadowPosH.z;
     
-    return depth + 0.005 < shadowPosH.z ? 0 : 1;
+    // PCF
+    uint width, height, numMips;
+    gShadowMap.GetDimensions(0, width, height, numMips);
+    
+    float dx = 1.0 / (float)width;
+    const float2 offsets[9] =
+    {
+        float2(-dx, -dx),
+        float2(0.0, -dx),
+        float2(dx, -dx),
+        float2(-dx, 0.0),
+        float2(0.0, 0.0),
+        float2(dx, 0.0),
+        float2(-dx, dx),
+        float2(0.0, dx),
+        float2(dx, dx),
+    };
+    
+    float percentLit = 0.0f;
+    
+    [unroll]
+    for (int i = 0; i < 9; ++i)
+    {
+        float depth = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy + offsets[i]).r;
+        
+        if(depth + 0.005 > curDepth)
+            percentLit += 1;
+    }
+    
+    return percentLit / 9.0;
 }
 
 float3 TangentToWorldSpace(float3 normalMapSample, float3 tangent, float3 normal)

@@ -17,7 +17,8 @@ VertexOut main(VertexIn input)
     
     float4 tex = mul(float4(input.tex, 0.0, 1.0), objConstants.gTexTransform);
     output.tex = mul(tex, objConstants.gMatTransform).xy;
-    
+   
+    // 将世界坐标的点，转换到阴影贴图的纹理坐标空间
     output.ShadowPosH = mul(posW, passConstants.gShadowTransform);
     
     return output;
