@@ -83,6 +83,7 @@ __declspec(align(16)) struct ObjConstants
 __declspec(align(16)) struct PassConstants
 {
 	DirectX::XMFLOAT4X4 ViewProj;
+	DirectX::XMFLOAT4X4 ShadowTransform;
 	DirectX::XMFLOAT3 eyePosW = {0.0, 0.0, 0.0};
 	float pad0 = 0.0;
 	DirectX::XMFLOAT4 ambientLight = { 0.0f, 0.0f, 0.0f, 1.0f };

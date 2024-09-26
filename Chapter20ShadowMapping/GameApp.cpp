@@ -108,7 +108,6 @@ void GameApp::Update(float deltaT)
 	// switch the scene
 	if (GameInput::IsFirstPressed(GameInput::kKey_f1))
 		m_bRenderShapes = !m_bRenderShapes;
-
 }
 
 void GameApp::RenderScene(void)
@@ -139,6 +138,7 @@ void GameApp::RenderScene(void)
 	gfxContext.SetRootSignature(m_RootSignature);
 
 	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(camera.GetViewProjMatrix()));
+	XMStoreFloat4x4(&passConstant.ShadowTransform, XMMatrixTranspose(m_shadowMap->GetShadowTransform()));
 	XMStoreFloat3(&passConstant.eyePosW, camera.GetPosition());
 	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
@@ -1203,7 +1203,7 @@ void GameApp::UpdateCamera(float deltaT)
 
 	float x = m_radius * cosf(m_yRotate) * sinf(m_xRotate);
 	float y = m_radius * sinf(m_yRotate);
-	float z = m_radius * cosf(m_yRotate) * cosf(m_xRotate);
+	float z = -m_radius * cosf(m_yRotate) * cosf(m_xRotate);
 
 	camera.SetEyeAtUp({x,y,z}, Math::Vector3(Math::kZero), Math::Vector3(Math::kYUnitVector));
 	camera.SetAspectRatio(m_aspectRatio);

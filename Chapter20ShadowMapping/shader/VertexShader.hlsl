@@ -18,6 +18,8 @@ VertexOut main(VertexIn input)
     float4 tex = mul(float4(input.tex, 0.0, 1.0), objConstants.gTexTransform);
     output.tex = mul(tex, objConstants.gMatTransform).xy;
     
+    output.ShadowPosH = mul(posW, passConstants.gShadowTransform);
+    
     return output;
 }
 

@@ -28,6 +28,7 @@ struct Light
 struct PassConstants
 {
     float4x4 gViewProj;
+    float4x4 gShadowTransform;
     float3 gEyePosW;
     float pad0;
     float4 gAmbientLight;
@@ -74,9 +75,10 @@ struct VertexIn
 struct VertexOut
 {
     float3 normal : NORMAL;
-    float3 positionW : POSITION;
+    float3 positionW : POSITION0;
     float2 tex : TEXCOORD;
     float3 tangentW : TANGENT;
+    float4 ShadowPosH : POSITION1; // only omit at last one
     float4 positionH : SV_Position; // only omit at last one
 };
 

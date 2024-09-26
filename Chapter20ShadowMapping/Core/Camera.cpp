@@ -37,7 +37,7 @@ void Math::BaseCamera::SetLookDirection(Vector3 forward, Vector3 up)
 	up = Cross(right, forward);
 
 	// Finish constructing basis
-	m_Basis = Matrix3(right, up, forward); // left hand coordinate
+	m_Basis = Matrix3(right, up, -forward); // left hand coordinate
 	m_CameraToWorld.SetRotation(Quaternion(m_Basis));
 }
 
