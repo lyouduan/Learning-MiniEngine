@@ -11,10 +11,10 @@ VertexOut main(VertexIn vin)
     // 以相机为skybox中心
     posW.xyz += passConstants.gEyePosW;
     
-    vout.positionH = mul(posW, passConstants.gViewProj);
+    vout.positionH = mul(posW, passConstants.gViewProj).xyww;
     
     // reversed-z: far plane = 0.0f
-    vout.positionH.z = 0;
+    //vout.positionH.z = 0;
     
     return vout;
 }

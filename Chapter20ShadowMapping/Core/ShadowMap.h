@@ -1,18 +1,24 @@
 #pragma once
 #include "DepthBuffer.h"
 #include <DirectXCollision.h>
+#include "DepthBuffer.h"
 
 class ShadowMap
 {
 public:
 
 	ShadowMap(UINT width, UINT height, DXGI_FORMAT format);
+	ShadowMap(const ShadowMap& rhs) = delete;
+	ShadowMap& operator=(const ShadowMap& rhs) = delete;
+	~ShadowMap();
 
-	void SetToLightSpaceView(DirectX::XMFLOAT3 lightDir, DirectX::XMFLOAT3 target,DirectX::BoundingSphere mSceneBounds);
+	void SetToLightSpaceView(DirectX::XMFLOAT3 lightDir, DirectX::BoundingSphere mSceneBounds);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE GetDSV() { return m_ShadowMap.GetDSV(); }
+	DepthBuffer& GetShadowBuffer() { return m_ShadowMap; }
 
-	D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() { return m_ShadowMap.GetDepthSRV(); }
+	const D3D12_CPU_DESCRIPTOR_HANDLE& GetDSV() { return m_ShadowMap.GetDSV(); }
+
+	const D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV() { return m_ShadowMap.GetDepthSRV(); }
 
 	DXGI_FORMAT GetFormat() { return m_Format; }
 

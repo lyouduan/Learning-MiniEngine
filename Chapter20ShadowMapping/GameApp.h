@@ -10,6 +10,7 @@
 #include <memory>
 #include "TextureManager.h"
 #include "Camera.h"
+#include "ShadowMap.h"
 
 enum class RenderLayer : int
 {
@@ -18,6 +19,8 @@ enum class RenderLayer : int
 	Transparent,
 	OpaqueDynamicReflectors,
 	Skybox,
+	Shadow,
+	Debug,
 	Count
 };
 
@@ -65,6 +68,8 @@ private:
 	void DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderItem*>& items);
 	void DrawSceneToCubeMap(GraphicsContext& gfxContext);
 
+	void DrawSceneToShadowMap(GraphicsContext& gfxContext);
+
 	void BuildCubeFaceCamera(float x=0.0, float y=0.0, float z=0.0);
 
 	void BuildLandRenderItems();
@@ -86,6 +91,7 @@ private:
 	void UpdatePassCB(float deltaT);
 	void UpdateCamera(float deltaT);
 	void UpdateWaves(float deltaT);
+	void UpdateShadowTranform(float deltaT);
 	void AnimateMaterials(float deltaT);
 
 	RootSignature m_RootSignature;
@@ -133,6 +139,9 @@ private:
 	StructuredBuffer matBuffer;
 
 	float totalTime = 0;
+
+	// shadow map
+	std::unique_ptr<ShadowMap> m_shadowMap;
 
 	// camera
 	Math::Camera camera;

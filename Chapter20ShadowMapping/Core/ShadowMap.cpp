@@ -9,20 +9,25 @@ ShadowMap::ShadowMap(UINT width, UINT height, DXGI_FORMAT format)
 	m_Format = format;
 
 	m_Viewport = { 0.0, 0.0, (float)width, (float)height, 0.0, 1.0 };
-	m_ScissorRect = { 0, 0, (int)width, (int)height };
+	m_ScissorRect = { 1, 1, (int)width-2, (int)height-2 };
 
 	// create depth buffer
 	CreateBuffer();
 }
 
-void ShadowMap::SetToLightSpaceView(DirectX::XMFLOAT3 _lightDir, DirectX::XMFLOAT3 _target, DirectX::BoundingSphere mSceneBounds)
+ShadowMap::~ShadowMap()
+{
+	m_ShadowMap.Destroy();
+}
+
+void ShadowMap::SetToLightSpaceView(DirectX::XMFLOAT3 _lightDir, DirectX::BoundingSphere mSceneBounds)
 {
 	// parallel light
 
 	XMVECTOR lightDir = XMLoadFloat3(&_lightDir);
 
-	XMVECTOR lightPos = -2.0f * mSceneBounds.Radius * lightDir;
-	XMVECTOR target = XMLoadFloat3(&_target);
+	XMVECTOR lightPos = 1.0f * mSceneBounds.Radius * lightDir;
+	XMVECTOR target = XMLoadFloat3(&mSceneBounds.Center);
 	XMVECTOR lightUp = XMVectorSet(0.0, 1.0, 0.0, 0.0);
 
 	m_LightView = DirectX::XMMatrixLookAtLH(lightPos, target, lightUp);
@@ -38,7 +43,8 @@ void ShadowMap::SetToLightSpaceView(DirectX::XMFLOAT3 _lightDir, DirectX::XMFLOA
 	float t = sphereCenterLS.y + mSceneBounds.Radius;
 	float f = sphereCenterLS.z + mSceneBounds.Radius;
 
-	m_LightProjection = XMMatrixOrthographicOffCenterLH(l, r, b, t, n, f);
+	// ????
+	m_LightProjection = XMMatrixOrthographicOffCenterLH(l, r, b, t, f, n );
 
 	//Transform NDC space[-1, +1] ^ 2 to texture space[0, 1] ^ 2
 	XMMATRIX T(

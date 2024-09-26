@@ -9,8 +9,8 @@ namespace Graphics
 	 
 	// reverse-z
 	// set the clear value as 0.0 on far plane, 1.0 is the near plane in DNC
-	DepthBuffer g_SceneDepthBuffer(0.0, 0);
-	DepthBuffer g_CubeMapDepthBuffer(0.0, 0);
+	DepthBuffer g_SceneDepthBuffer(1.0, 0);
+	DepthBuffer g_CubeMapDepthBuffer(1.0, 0);
 
 	CubeMapBuffer g_SceneCubeMapBuffer;
 }

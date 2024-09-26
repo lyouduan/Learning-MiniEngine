@@ -37,7 +37,7 @@ void Math::BaseCamera::SetLookDirection(Vector3 forward, Vector3 up)
 	up = Cross(right, forward);
 
 	// Finish constructing basis
-	m_Basis = Matrix3(right, up, -forward); // left hand coordinate
+	m_Basis = Matrix3(right, up, forward); // left hand coordinate
 	m_CameraToWorld.SetRotation(Quaternion(m_Basis));
 }
 
@@ -64,7 +64,7 @@ void Math::BaseCamera::SetTransform(const OrthogonalTransform& xform)
 }
 
 Math::Camera::Camera()
-	: m_ReverseZ(true), m_InfiniteZ(false)
+	: m_ReverseZ(false), m_InfiniteZ(false)
 {
 	SetPerspectiveMatrix(XM_PIDIV4, 9.0f / 16.0f, 1.0f, 1000.0f);
 }
