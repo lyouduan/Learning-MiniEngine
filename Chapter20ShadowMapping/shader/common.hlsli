@@ -79,6 +79,7 @@ struct VertexOut
     float2 tex : TEXCOORD;
     float3 tangentW : TANGENT;
     float4 ShadowPosH : POSITION1; // only omit at last one
+    float depth : TEXCOORD1; // only omit at last one
     float4 positionH : SV_Position; // only omit at last one
 };
 

@@ -52,6 +52,7 @@ void GameApp::Startup(void)
 	BuildShapeGeometry();
 	BuildBoxGeometry();
 	BuildSkullGeometry();
+	BuildFullQuadGeometry();
 
 	// build render items
 	BuildLandRenderItems();
@@ -64,8 +65,12 @@ void GameApp::Startup(void)
 	// create shadowMap
 	m_shadowMap = std::make_unique<ShadowMap>(1024, 1024, DXGI_FORMAT_D32_FLOAT);
 
+
 	// set PSO and Root Signature
 	SetPsoAndRootSig();
+
+	m_BlurMap = std::make_unique<Blur>(1024, 1024, g_Depth2Buffer.GetFormat());
+	
 }
 
 void GameApp::Cleanup(void)
@@ -119,6 +124,11 @@ void GameApp::RenderScene(void)
 
 	DrawSceneToShadowMap(gfxContext);
 
+	DrawSceneToDepth2Map(gfxContext);
+
+	// 完成之前的绘制
+	m_BlurMap->Execute(m_shadowMap->GetShadowBuffer(), 3, 3);
+
 	// reset viewport and scissor
 	gfxContext.SetViewportAndScissor(m_Viewport, m_Scissor);
 
@@ -148,7 +158,7 @@ void GameApp::RenderScene(void)
 	// srv tables
 	gfxContext.SetDynamicDescriptors(4, 0, m_srvs.size(), &m_srvs[0]);
 	gfxContext.SetDynamicDescriptors(5, 0, m_Normalsrvs.size(), &m_Normalsrvs[0]);
-	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_shadowMap->GetSRV());
+	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_BlurMap->GetOutput().GetSRV());
 
 	// draw call
 	//if (m_bRenderShapes)
@@ -164,7 +174,7 @@ void GameApp::RenderScene(void)
 
 	// debug shadow map
 	gfxContext.SetPipelineState(m_PSOs["debug"]);
-	DrawRenderItems(gfxContext, m_ShapeRenders[(int)RenderLayer::Debug]);
+	DrawRenderItems(gfxContext, m_ShapeRenders[(int)RenderLayer::Quad]);
 
 	// draw sky box at last
 	gfxContext.SetPipelineState(m_PSOs["sky"]);
@@ -290,6 +300,16 @@ void GameApp::SetPsoAndRootSig()
 	debugPSO.Finalize();
 
 	m_PSOs["debug"] = debugPSO;
+
+	// shadowPSO
+	GraphicsPSO shadow2PSO = debugPSO;
+	ComPtr<ID3DBlob> depth2PS;
+	D3DReadFileToBlob(L"shader/depth2PS.cso", &depth2PS);
+
+	shadow2PSO.SetRenderTargetFormat(g_Depth2Buffer.GetFormat(), g_SceneDepthBuffer.GetFormat());
+	shadow2PSO.SetPixelShader(depth2PS);
+	shadow2PSO.Finalize();
+	m_PSOs["shadow2"] = shadow2PSO;
 }
 
 void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderItem*>& items)
@@ -392,6 +412,46 @@ void GameApp::DrawSceneToShadowMap(GraphicsContext& gfxContext)
 	}
 	
 	gfxContext.TransitionResource(m_shadowMap->GetShadowBuffer(), D3D12_RESOURCE_STATE_GENERIC_READ, true);
+}
+
+void GameApp::DrawSceneToDepth2Map(GraphicsContext& gfxContext)
+{
+	// 
+	auto width = g_Depth2Buffer.GetWidth();
+	auto height = g_Depth2Buffer.GetHeight();
+	D3D12_VIEWPORT mViewport = { 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
+	D3D12_RECT mScissorRect = { 0, 0, (LONG)width, (LONG)height };
+	gfxContext.SetViewportAndScissor(mViewport, mScissorRect);
+
+	// transition buffer to depth write
+	gfxContext.TransitionResource(g_Depth2Buffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+
+	g_Depth2Buffer.SetClearColor(Color{ 1.0f, 1.0f, 1.0f, 1.0f });
+	gfxContext.ClearColor(g_Depth2Buffer);
+	gfxContext.ClearDepth(g_SceneDepthBuffer);
+
+	gfxContext.SetRenderTarget(g_Depth2Buffer.GetRTV(), g_SceneDepthBuffer.GetDSV());
+
+	gfxContext.SetRootSignature(m_RootSignature);
+
+	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(m_shadowMap->GetLightView() * m_shadowMap->GetLightProj()));
+	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
+
+	// structured buffer
+	gfxContext.SetBufferSRV(2, matBuffer);
+
+	// set shadowmap
+	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_shadowMap->GetSRV());
+
+	gfxContext.SetPipelineState(m_PSOs["shadow2"]);
+
+	// draw call
+	{
+		DrawRenderItems(gfxContext, m_ShapeRenders[(int)RenderLayer::FullQuad]);
+	}
+
+	gfxContext.TransitionResource(g_Depth2Buffer, D3D12_RESOURCE_STATE_GENERIC_READ, true);
 }
 
 void GameApp::BuildCubeFaceCamera(float x, float y, float z)
@@ -502,7 +562,7 @@ void GameApp::BuildShapeRenderItems()
 	m_ShapeRenders[(int)RenderLayer::Shadow].push_back(skullRitem.get());
 	m_ShapeRenders[(int)RenderLayer::Shadow].push_back(globeRitem.get());
 
-	m_ShapeRenders[(int)RenderLayer::Debug].push_back(quadRitem.get());
+	m_ShapeRenders[(int)RenderLayer::Quad].push_back(quadRitem.get());
 
 
 	m_AllRenders.push_back(std::move(boxRitem));
@@ -600,6 +660,18 @@ void GameApp::BuildSkyboxRenderItems()
 	m_AllRenders.push_back(std::move(box));
 
 
+	auto fullQuad = std::make_unique<RenderItem>();
+	fullQuad->World = XMMatrixIdentity();
+	fullQuad->ObjCBIndex = 0;
+	fullQuad->Mat = m_Materials["mirror0"].get();
+	fullQuad->Geo = m_Geometry["fullQuadGeo"].get();
+	fullQuad->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	fullQuad->IndexCount = fullQuad->Geo->DrawArgs["fullQuad"].IndexCount;
+	fullQuad->BaseVertexLocation = fullQuad->Geo->DrawArgs["fullQuad"].BaseVertexLocation;
+	fullQuad->StartIndexLocation = fullQuad->Geo->DrawArgs["fullQuad"].StartIndexLocation;
+
+	m_ShapeRenders[(int)RenderLayer::FullQuad].push_back(fullQuad.get());
+	m_AllRenders.push_back(std::move(fullQuad));
 }
 
 void GameApp::BuildLandRenderItems()
@@ -731,6 +803,7 @@ void GameApp::BuildWavesGeometry()
 void GameApp::BuildShapeGeometry()
 {
 	GeometryGenerator geoGen;
+	
 	GeometryGenerator::MeshData box = geoGen.CreateBox(1.5f, 0.5f, 1.5f, 3);
 	GeometryGenerator::MeshData grid = geoGen.CreateGrid(20.0f, 30.0f, 60, 40);
 	GeometryGenerator::MeshData sphere = geoGen.CreateSphere(0.5f, 20, 20);
@@ -951,6 +1024,39 @@ void GameApp::BuildSkullGeometry()
 
 	m_Geometry["skullGeo"] = std::move(geo);
 
+}
+
+void GameApp::BuildFullQuadGeometry()
+{
+	GeometryGenerator geoGen;
+	GeometryGenerator::MeshData quad = geoGen.CreateQuad(-1.0f, 1.0f, 2.0f, 2.0f, 0.0f); // n
+
+	std::vector<Vertex> vertices(quad.Vertices.size());
+	for (size_t i = 0; i < quad.Vertices.size(); ++i)
+	{
+		auto& p = quad.Vertices[i].Position;
+		vertices[i].position = p;
+		vertices[i].normal = quad.Vertices[i].Normal;
+		vertices[i].tex = quad.Vertices[i].TexC;
+		vertices[i].tangent = quad.Vertices[i].TangentU;
+
+	}
+
+	std::vector<std::uint16_t> indices = quad.GetIndices16();
+
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->name = "fullQuadGeo";
+	geo->m_VertexBuffer.Create(L"vertex buff", (UINT)vertices.size(), sizeof(Vertex), vertices.data());
+	geo->m_IndexBuffer.Create(L"Index Buffer", (UINT)indices.size(), sizeof(std::uint16_t), indices.data());
+
+	SubmeshGeometry submesh;
+	submesh.IndexCount = (UINT)indices.size();
+	submesh.StartIndexLocation = 0;
+	submesh.BaseVertexLocation = 0;
+
+	geo->DrawArgs["fullQuad"] = std::move(submesh);
+
+	m_Geometry["fullQuadGeo"] = std::move(geo);
 }
 
 float GameApp::GetHillsHeight(float x, float z) const
@@ -1257,7 +1363,7 @@ void GameApp::UpdateShadowTranform(float deltaT)
 {
 	DirectX::BoundingSphere mSceneBounds;
 	mSceneBounds.Center = XMFLOAT3(0.0, 0.0, 0.0);
-	mSceneBounds.Radius = sqrtf(10.0 * 10.0 + 15.0 * 15.0);
+	mSceneBounds.Radius = sqrtf(10.0 * 10.0 + 10.0 * 10.0);
 
 	m_shadowMap->SetToLightSpaceView(passConstant.Lights[0].Direction, mSceneBounds);
 }

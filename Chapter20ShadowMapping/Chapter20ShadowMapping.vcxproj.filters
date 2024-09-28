@@ -126,6 +126,9 @@
     <ClCompile Include="Core\ShadowMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Blur.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Command\CommandAllocatorPool.h">
@@ -281,6 +284,9 @@
     <ClInclude Include="Core\ShadowMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Blur.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Core\Math\Functions.inl">
@@ -292,6 +298,7 @@
     <None Include="shader\skyboxPS.cso" />
     <None Include="shader\skyboxVS.cso" />
     <None Include="shader\VertexShader.cso" />
+    <None Include="shader\CSCommon.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader\VertexShader.hlsl" />
@@ -302,5 +309,9 @@
     <FxCompile Include="shader\shadowMapPS.hlsl" />
     <FxCompile Include="shader\shadowDebugVS.hlsl" />
     <FxCompile Include="shader\shadowDebugPS.hlsl" />
+    <FxCompile Include="shader\depth2PS.hlsl" />
+    <FxCompile Include="shader\CSHorzBlur.hlsl" />
+    <FxCompile Include="shader\CSVertBlur.hlsl" />
+    <FxCompile Include="shader\CSvsm.hlsl" />
   </ItemGroup>
 </Project>

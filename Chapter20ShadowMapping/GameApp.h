@@ -11,6 +11,7 @@
 #include "TextureManager.h"
 #include "Camera.h"
 #include "ShadowMap.h"
+#include "Blur.h"
 
 enum class RenderLayer : int
 {
@@ -20,7 +21,8 @@ enum class RenderLayer : int
 	OpaqueDynamicReflectors,
 	Skybox,
 	Shadow,
-	Debug,
+	Quad,
+	FullQuad,
 	Count
 };
 
@@ -69,6 +71,7 @@ private:
 	void DrawSceneToCubeMap(GraphicsContext& gfxContext);
 
 	void DrawSceneToShadowMap(GraphicsContext& gfxContext);
+	void DrawSceneToDepth2Map(GraphicsContext& gfxContext);
 
 	void BuildCubeFaceCamera(float x=0.0, float y=0.0, float z=0.0);
 
@@ -81,6 +84,7 @@ private:
 	void BuildShapeGeometry();
 	void BuildBoxGeometry();
 	void BuildSkullGeometry();
+	void BuildFullQuadGeometry();
 
 	float GetHillsHeight(float x, float z)const;
 	DirectX::XMFLOAT3 GetHillsNormal(float x, float z)const;
@@ -142,6 +146,7 @@ private:
 
 	// shadow map
 	std::unique_ptr<ShadowMap> m_shadowMap;
+	std::unique_ptr<Blur> m_BlurMap;
 
 	// camera
 	Math::Camera camera;

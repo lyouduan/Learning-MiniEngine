@@ -6,6 +6,7 @@
 namespace Graphics
 {
 	extern CubeMapBuffer g_SceneCubeMapBuffer;
+	extern ColorBuffer g_Depth2Buffer;
 	extern DepthBuffer g_SceneDepthBuffer;
 	extern DepthBuffer g_CubeMapDepthBuffer;
 

@@ -1,6 +1,7 @@
 #include "common.hlsli"
 
-void main(VertexOut input)
+float main(VertexOut input) : SV_DEPTH
 {
     // return depth-z
+    return input.depth;
 }

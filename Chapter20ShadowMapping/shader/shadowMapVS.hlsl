@@ -11,5 +11,7 @@ VertexOut main(VertexIn vin)
     // Assumes nonuniform scaling; otherwise, need to use inverse-transpose of world matrix.
     vout.normal = mul(vin.normal, (float3x3) objConstants.gWorld);
     
+    vout.depth = vout.positionH.z / vout.positionH.w;
+    
     return vout;
 }

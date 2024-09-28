@@ -13,6 +13,8 @@ namespace Graphics
 	DepthBuffer g_CubeMapDepthBuffer(1.0, 0);
 
 	CubeMapBuffer g_SceneCubeMapBuffer;
+
+	ColorBuffer g_Depth2Buffer;
 }
 
 #define T2X_COLOR_FORMAT DXGI_FORMAT_R10G10B10A2_UNORM
@@ -23,6 +25,8 @@ void Graphics::InitializeRenderingBuffers(uint32_t width, uint32_t height)
 {
 	g_SceneCubeMapBuffer.Create(L"Cubemap Buffer", 512, 512, 1, T2X_COLOR_FORMAT);
 	g_CubeMapDepthBuffer.Create(L"Cubemap Depth Buffer", 512, 512, DSV_FORMAT);
+
+	g_Depth2Buffer.Create(L"Depth2 Buffer", 512, 512, 1, DXGI_FORMAT_R32G32_FLOAT);
 
 	g_SceneDepthBuffer.Create(L"Scene Depth Buffer", width, height, DSV_FORMAT);
 }
@@ -37,4 +41,5 @@ void Graphics::DestroyRenderingBuffers()
 	g_CubeMapDepthBuffer.Destroy();
 
 	g_SceneDepthBuffer.Destroy();
+	g_Depth2Buffer.Destroy();
 }

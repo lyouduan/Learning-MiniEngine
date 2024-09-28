@@ -1,7 +1,7 @@
 #include "common.hlsli"
 #include "LightingUtil.hlsli"
 
-float CalcShadowFactor(float4 shadowPosH)
+float CalcShadowFactor(float4 shadowPosH, float bias)
 {
     shadowPosH.xyz /= shadowPosH.w;
     
@@ -28,15 +28,15 @@ float CalcShadowFactor(float4 shadowPosH)
     float percentLit = 0.0f;
     
     [unroll]
-    for (int i = 0; i < 9; ++i)
+    for (int i = 0; i < 1; ++i)
     {
-        float depth = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy + offsets[i]).r;
+        float depth = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy).r;
         
-        if(depth + 0.005 > curDepth)
+        if (depth + bias > curDepth)
             percentLit += 1;
     }
     
-    return percentLit / 9.0;
+    return percentLit / 1.0;
 }
 
 float3 TangentToWorldSpace(float3 normalMapSample, float3 tangent, float3 normal)
@@ -88,8 +88,9 @@ float4 main(VertexOut input) : SV_TARGET
     
     Material mat = { diffuseAlbedo, fresnelR0, shininess };
     
+    float bias = 0.005;
     float3 shadowFactor = 1.0f;
-    shadowFactor[0] = CalcShadowFactor(input.ShadowPosH);
+    shadowFactor[0] = CalcShadowFactor(input.ShadowPosH, bias);
     
     float4 directLight = ComputeLighting(passConstants.Lights, mat, input.positionW,
         normalW, toEyeW, shadowFactor);
