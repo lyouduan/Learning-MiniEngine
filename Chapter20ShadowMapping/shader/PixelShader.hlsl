@@ -1,7 +1,7 @@
 #include "common.hlsli"
 #include "LightingUtil.hlsli"
 
-float CalcShadowFactor(float4 shadowPosH, float bias)
+float PCF(float4 shadowPosH, float bias)
 {
     shadowPosH.xyz /= shadowPosH.w;
     
@@ -28,15 +28,15 @@ float CalcShadowFactor(float4 shadowPosH, float bias)
     float percentLit = 0.0f;
     
     [unroll]
-    for (int i = 0; i < 1; ++i)
+    for (int i = 0; i < 9; ++i)
     {
-        float depth = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy).r;
+        float depth = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy + offsets[i]).r;
         
         if (depth + bias > curDepth)
             percentLit += 1;
     }
     
-    return percentLit / 1.0;
+    return percentLit / 9.0;
 }
 
 float3 TangentToWorldSpace(float3 normalMapSample, float3 tangent, float3 normal)
@@ -53,6 +53,31 @@ float3 TangentToWorldSpace(float3 normalMapSample, float3 tangent, float3 normal
     float3 normalW = mul(normalT, TBN);
  
     return normalW;
+}
+
+float VSM(float4 shadowPosH, float bias)
+{
+    shadowPosH.xyz /= shadowPosH.w;
+    
+    float curDepth = shadowPosH.z;
+    
+    float2 SampleValue = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy).xy;
+    
+    float Mean = SampleValue.x;
+    
+    // 切尔比夫不等式成立条件 t>u
+    // 只有当当前片段的深度 t 大于或等于采样区域中的平均深度 μ 时，切比雪夫不等式才能有效地估算光源被遮挡的概率
+    if (curDepth <= Mean + bias)
+        return 1.0f;
+
+    float Variance = SampleValue.y - Mean * Mean;
+    
+    float Diff = curDepth - Mean;
+    
+    float Result = Variance / (Variance + Diff * Diff);
+    
+    return clamp(Result, 0.0, 1.0);
+    
 }
 
 float4 main(VertexOut input) : SV_TARGET
@@ -90,7 +115,7 @@ float4 main(VertexOut input) : SV_TARGET
     
     float bias = 0.005;
     float3 shadowFactor = 1.0f;
-    shadowFactor[0] = CalcShadowFactor(input.ShadowPosH, bias);
+    shadowFactor[0] = VSM(input.ShadowPosH, bias);
     
     float4 directLight = ComputeLighting(passConstants.Lights, mat, input.positionW,
         normalW, toEyeW, shadowFactor);

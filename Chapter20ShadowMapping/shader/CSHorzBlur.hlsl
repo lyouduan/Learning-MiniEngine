@@ -46,6 +46,6 @@ void main(int3 groupThreadID : SV_GroupThreadID,
 		
         blurColor += weights[i + gBlurRadius] * gCache[k];
     }
-	
+    
     gOutput[dispatchThreadID.xy] = blurColor;
 }

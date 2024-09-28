@@ -58,7 +58,7 @@ void Blur::CreateComputeRootSig()
 	m_VsmPSO.Finalize();
 }
 
-void Blur::Execute(DepthBuffer& input, int BlurCount, int BlurKernelSize)
+void Blur::Execute(DepthBuffer& input, int BlurCount)
 {
 
 	ComputeContext& CScontext = ComputeContext::Begin(L"blur compute");
@@ -83,7 +83,7 @@ void Blur::Execute(DepthBuffer& input, int BlurCount, int BlurKernelSize)
 	//---------------------------------
 	// blur pass
 	//---------------------------------
-	auto weights = CalcGaussWeights(2.5f);
+	auto weights = CalcGaussWeights(1.5f);
 	int blurRadius = (int)weights.size() / 2;
 
 	CScontext.SetConstant(0, 0, blurRadius);

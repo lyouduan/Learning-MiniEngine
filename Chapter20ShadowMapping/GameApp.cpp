@@ -127,7 +127,7 @@ void GameApp::RenderScene(void)
 	DrawSceneToDepth2Map(gfxContext);
 
 	// 完成之前的绘制
-	m_BlurMap->Execute(m_shadowMap->GetShadowBuffer(), 3, 3);
+	m_BlurMap->Execute(m_shadowMap->GetShadowBuffer(), 1);
 
 	// reset viewport and scissor
 	gfxContext.SetViewportAndScissor(m_Viewport, m_Scissor);

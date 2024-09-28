@@ -20,7 +20,7 @@ public:
 	UINT GetWidth() const { return m_Width; }
 	UINT GetHeight() const { return m_Height; }
 
-	void Execute(DepthBuffer& input, int BlurCount, int BlurKernelSize);
+	void Execute(DepthBuffer& input, int BlurCount);
 
 private:
 
