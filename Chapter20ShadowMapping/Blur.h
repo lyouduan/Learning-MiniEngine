@@ -15,7 +15,7 @@ public:
 
 	void CreateComputeRootSig();
 
-	ColorBuffer& GetOutput() { return Output1; }
+	ColorBuffer& GetOutput() { return Output0; }
 	DXGI_FORMAT GetFormat() const { return m_Format; }
 	UINT GetWidth() const { return m_Width; }
 	UINT GetHeight() const { return m_Height; }
@@ -36,8 +36,7 @@ private:
 	DXGI_FORMAT m_Format;
 
 	RootSignature m_ComputeRootSig;
-	ComputePSO m_HorzPSO;
-	ComputePSO m_VertPSO;
-	ComputePSO m_VsmPSO;
+
+	std::unordered_map<std::string, ComputePSO> m_PSOs;
 };
 

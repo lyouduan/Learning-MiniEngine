@@ -80,6 +80,21 @@ float VSM(float4 shadowPosH, float bias)
     
 }
 
+
+float ESM(float4 shadowPosH)
+{
+    shadowPosH.xyz /= shadowPosH.w;
+    
+    float curDepth = shadowPosH.z;
+    
+    float exp_cd = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy).r;
+    
+    float f = exp(-80 * curDepth) * exp_cd;
+    
+    return saturate(f);
+}
+
+
 float4 main(VertexOut input) : SV_TARGET
 {
     MaterialData matData = gMaterialData[objConstants.gMaterialIndex];
@@ -115,7 +130,7 @@ float4 main(VertexOut input) : SV_TARGET
     
     float bias = 0.005;
     float3 shadowFactor = 1.0f;
-    shadowFactor[0] = VSM(input.ShadowPosH, bias);
+    shadowFactor[0] = ESM(input.ShadowPosH);
     
     float4 directLight = ComputeLighting(passConstants.Lights, mat, input.positionW,
         normalW, toEyeW, shadowFactor);

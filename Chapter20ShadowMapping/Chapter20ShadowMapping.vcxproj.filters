@@ -313,5 +313,6 @@
     <FxCompile Include="shader\CSHorzBlur.hlsl" />
     <FxCompile Include="shader\CSVertBlur.hlsl" />
     <FxCompile Include="shader\CSvsm.hlsl" />
+    <FxCompile Include="shader\CSEsm.hlsl" />
   </ItemGroup>
 </Project>

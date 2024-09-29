@@ -69,7 +69,7 @@ void GameApp::Startup(void)
 	// set PSO and Root Signature
 	SetPsoAndRootSig();
 
-	m_BlurMap = std::make_unique<Blur>(1024, 1024, g_Depth2Buffer.GetFormat());
+	m_BlurMap = std::make_unique<Blur>(1024, 1024, DXGI_FORMAT_R32_FLOAT);
 	
 }
 
@@ -124,9 +124,9 @@ void GameApp::RenderScene(void)
 
 	DrawSceneToShadowMap(gfxContext);
 
-	DrawSceneToDepth2Map(gfxContext);
+	//DrawSceneToDepth2Map(gfxContext);
 
-	// 完成之前的绘制
+	// ESM完成之前的绘制
 	m_BlurMap->Execute(m_shadowMap->GetShadowBuffer(), 1);
 
 	// reset viewport and scissor

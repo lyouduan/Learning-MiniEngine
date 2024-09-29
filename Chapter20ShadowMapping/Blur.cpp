@@ -23,8 +23,7 @@ Blur::~Blur()
 	Output0.Destroy();
 	Output1.Destroy();
 
-	m_HorzPSO.DesytroyAll();
-	m_VertPSO.DesytroyAll();
+	m_PSOs.clear();
 
 	m_ComputeRootSig.DestroyAll();
 }
@@ -41,21 +40,35 @@ void Blur::CreateComputeRootSig()
 	Microsoft::WRL::ComPtr<ID3DBlob> csHorz;
 	Microsoft::WRL::ComPtr<ID3DBlob> csVert;
 	Microsoft::WRL::ComPtr<ID3DBlob> CSvsm;
+	Microsoft::WRL::ComPtr<ID3DBlob> CSEsm;
 	D3DReadFileToBlob(L"shader/CSHorzBlur.cso", &csHorz);
 	D3DReadFileToBlob(L"shader/CSVertBlur.cso", &csVert);
 	D3DReadFileToBlob(L"shader/CSvsm.cso", &CSvsm);
+	D3DReadFileToBlob(L"shader/CSEsm.cso", &CSEsm);
 
+	ComputePSO m_HorzPSO;
 	m_HorzPSO.SetRootSignature(m_ComputeRootSig);
 	m_HorzPSO.SetComputeShader(csHorz);
 	m_HorzPSO.Finalize();
-	
+	m_PSOs["horz"] = m_HorzPSO;
+
+	ComputePSO m_VertPSO;
 	m_VertPSO.SetRootSignature(m_ComputeRootSig);
 	m_VertPSO.SetComputeShader(csVert);
 	m_VertPSO.Finalize();
+	m_PSOs["vert"] = m_VertPSO;
 
+	ComputePSO m_VsmPSO;
 	m_VsmPSO.SetRootSignature(m_ComputeRootSig);
 	m_VsmPSO.SetComputeShader(CSvsm);
 	m_VsmPSO.Finalize();
+	m_PSOs["vsm"] = m_VsmPSO;
+
+	ComputePSO m_EsmPSO;
+	m_EsmPSO.SetRootSignature(m_ComputeRootSig);
+	m_EsmPSO.SetComputeShader(CSEsm);
+	m_EsmPSO.Finalize();
+	m_PSOs["esm"] = m_EsmPSO;
 }
 
 void Blur::Execute(DepthBuffer& input, int BlurCount)
@@ -70,7 +83,8 @@ void Blur::Execute(DepthBuffer& input, int BlurCount)
 	CScontext.TransitionResource(input, D3D12_RESOURCE_STATE_GENERIC_READ, true);
 	CScontext.TransitionResource(Output0, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
 
-	CScontext.SetPipelineState(m_VsmPSO);
+	//CScontext.SetPipelineState(m_PSOs["vsm"]);
+	CScontext.SetPipelineState(m_PSOs["esm"]);
 	CScontext.SetDynamicDescriptor(1, 0, input.GetDepthSRV());
 	CScontext.SetDynamicDescriptor(2, 0, Output0.GetUAV());
 
@@ -92,7 +106,7 @@ void Blur::Execute(DepthBuffer& input, int BlurCount)
 	for (int i = 0; i < BlurCount; ++i)
 	{
 		// horizontal pass
-		CScontext.SetPipelineState(m_HorzPSO);
+		CScontext.SetPipelineState(m_PSOs["horz"]);
 
 		CScontext.TransitionResource(Output0, D3D12_RESOURCE_STATE_GENERIC_READ, true);
 		CScontext.TransitionResource(Output1, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
@@ -105,7 +119,7 @@ void Blur::Execute(DepthBuffer& input, int BlurCount)
 		CScontext.Dispatch(NumGroupsX, m_Height, 1);
 
 		// vertical pass
-		CScontext.SetPipelineState(m_VertPSO);
+		CScontext.SetPipelineState(m_PSOs["vert"]);
 
 		CScontext.TransitionResource(Output0, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
 		CScontext.TransitionResource(Output1, D3D12_RESOURCE_STATE_GENERIC_READ, true);

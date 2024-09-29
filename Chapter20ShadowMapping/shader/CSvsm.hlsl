@@ -4,5 +4,5 @@
 void main(int3 dispatchThreadID : SV_DispatchThreadID)
 {
     float Depth = gInput[dispatchThreadID.xy];
-    gOutput[dispatchThreadID.xy] = float2(Depth, Depth * Depth);
+    gOutput[dispatchThreadID.xy] = float2(Depth, Depth* Depth);
 }
