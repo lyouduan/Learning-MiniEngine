@@ -30,7 +30,8 @@ void main(int3 groupThreadID : SV_GroupThreadID,
     GroupMemoryBarrierWithGroupSync();
     
     // 处理每个像素
-    float2 blurColor = float2(0, 0);
+    //float2 blurColor = float2(0, 0);
+    float4 blurColor = float4(0, 0, 0, 0);
     
     for (int i = -gBlurRadius; i <= gBlurRadius; ++i)
     {

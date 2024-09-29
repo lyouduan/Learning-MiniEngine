@@ -41,10 +41,12 @@ void Blur::CreateComputeRootSig()
 	Microsoft::WRL::ComPtr<ID3DBlob> csVert;
 	Microsoft::WRL::ComPtr<ID3DBlob> CSvsm;
 	Microsoft::WRL::ComPtr<ID3DBlob> CSEsm;
+	Microsoft::WRL::ComPtr<ID3DBlob> CSEvsm;
 	D3DReadFileToBlob(L"shader/CSHorzBlur.cso", &csHorz);
 	D3DReadFileToBlob(L"shader/CSVertBlur.cso", &csVert);
 	D3DReadFileToBlob(L"shader/CSvsm.cso", &CSvsm);
 	D3DReadFileToBlob(L"shader/CSEsm.cso", &CSEsm);
+	D3DReadFileToBlob(L"shader/CSEvsm.cso", &CSEvsm);
 
 	ComputePSO m_HorzPSO;
 	m_HorzPSO.SetRootSignature(m_ComputeRootSig);
@@ -69,6 +71,12 @@ void Blur::CreateComputeRootSig()
 	m_EsmPSO.SetComputeShader(CSEsm);
 	m_EsmPSO.Finalize();
 	m_PSOs["esm"] = m_EsmPSO;
+
+	ComputePSO m_EvsmPSO;
+	m_EvsmPSO.SetRootSignature(m_ComputeRootSig);
+	m_EvsmPSO.SetComputeShader(CSEvsm);
+	m_EvsmPSO.Finalize();
+	m_PSOs["evsm"] = m_EvsmPSO;
 }
 
 void Blur::Execute(DepthBuffer& input, int BlurCount)
@@ -83,8 +91,9 @@ void Blur::Execute(DepthBuffer& input, int BlurCount)
 	CScontext.TransitionResource(input, D3D12_RESOURCE_STATE_GENERIC_READ, true);
 	CScontext.TransitionResource(Output0, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
 
+	CScontext.SetPipelineState(m_PSOs["evsm"]);
 	//CScontext.SetPipelineState(m_PSOs["vsm"]);
-	CScontext.SetPipelineState(m_PSOs["esm"]);
+	//CScontext.SetPipelineState(m_PSOs["esm"]);
 	CScontext.SetDynamicDescriptor(1, 0, input.GetDepthSRV());
 	CScontext.SetDynamicDescriptor(2, 0, Output0.GetUAV());
 

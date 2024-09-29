@@ -69,7 +69,7 @@ void GameApp::Startup(void)
 	// set PSO and Root Signature
 	SetPsoAndRootSig();
 
-	m_BlurMap = std::make_unique<Blur>(1024, 1024, DXGI_FORMAT_R32_FLOAT);
+	m_BlurMap = std::make_unique<Blur>(1024, 1024, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	
 }
 

@@ -39,6 +39,7 @@ float PCF(float4 shadowPosH, float bias)
     return percentLit / 9.0;
 }
 
+
 float3 TangentToWorldSpace(float3 normalMapSample, float3 tangent, float3 normal)
 {
     float3 normalT = 2.0f * normalMapSample - 1.0f;
@@ -55,6 +56,20 @@ float3 TangentToWorldSpace(float3 normalMapSample, float3 tangent, float3 normal
     return normalW;
 }
 
+float chebyshevUpperBound(float2 moments, float depth)
+{
+    if (depth <= moments.x + 0.001)
+        return 1.0f;
+    
+    float variance = moments.y - (moments.x * moments.x);
+    
+    float diff = depth - moments.x;
+    
+    float Result = variance / (variance + diff * diff);
+    
+    return clamp(Result, 0.0, 1.0);
+}
+
 float VSM(float4 shadowPosH, float bias)
 {
     shadowPosH.xyz /= shadowPosH.w;
@@ -63,21 +78,7 @@ float VSM(float4 shadowPosH, float bias)
     
     float2 SampleValue = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy).xy;
     
-    float Mean = SampleValue.x;
-    
-    // 切尔比夫不等式成立条件 t>u
-    // 只有当当前片段的深度 t 大于或等于采样区域中的平均深度 μ 时，切比雪夫不等式才能有效地估算光源被遮挡的概率
-    if (curDepth <= Mean + bias)
-        return 1.0f;
-
-    float Variance = SampleValue.y - Mean * Mean;
-    
-    float Diff = curDepth - Mean;
-    
-    float Result = Variance / (Variance + Diff * Diff);
-    
-    return clamp(Result, 0.0, 1.0);
-    
+    return chebyshevUpperBound(SampleValue, curDepth);
 }
 
 
@@ -94,6 +95,27 @@ float ESM(float4 shadowPosH)
     return saturate(f);
 }
 
+float Wrap(float x, float c)
+{
+    return exp(c * x);
+}
+
+float EVSM(float4 shadowPosH, float bias)
+{
+    shadowPosH.xyz /= shadowPosH.w;
+    
+    float curDepth = shadowPosH.z;
+    curDepth = 2.0 * curDepth - 1.0f;
+    
+    float2 Exp_depth = float2(Wrap(curDepth, 30), -Wrap(curDepth, -30));
+    
+    float4 SampleValue = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy);
+    
+    float p1 = chebyshevUpperBound(SampleValue.xy, Exp_depth.x);
+    float p2 = chebyshevUpperBound(SampleValue.zw, Exp_depth.y);
+    
+    return min(p1, p2);
+}
 
 float4 main(VertexOut input) : SV_TARGET
 {
@@ -130,7 +152,9 @@ float4 main(VertexOut input) : SV_TARGET
     
     float bias = 0.005;
     float3 shadowFactor = 1.0f;
-    shadowFactor[0] = ESM(input.ShadowPosH);
+    shadowFactor[0] = EVSM(input.ShadowPosH, bias);
+    //shadowFactor[0] = VSM(input.ShadowPosH, bias);
+    //shadowFactor[0] = ESM(input.ShadowPosH);
     
     float4 directLight = ComputeLighting(passConstants.Lights, mat, input.positionW,
         normalW, toEyeW, shadowFactor);

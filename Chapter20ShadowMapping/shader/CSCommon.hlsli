@@ -23,11 +23,11 @@ cbuffer cbSettings : register(b0)
 
 static const int gMaxBlurRadius = 5;
 
-Texture2D<float2> gInput : register(t0);
-RWTexture2D<float2> gOutput : register(u0);
+Texture2D<float4> gInput : register(t0);
+RWTexture2D<float4> gOutput : register(u0);
 
 #define N 256
 #define CacheSize (N + 2*gMaxBlurRadius)
-groupshared float2 gCache[CacheSize];
+groupshared float4 gCache[CacheSize];
 
 #endif // CSCOMMON_HLSLI 
