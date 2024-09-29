@@ -40,6 +40,76 @@ float PCF(float4 shadowPosH, float bias)
 }
 
 
+float PCSS(float4 shadowPosH, float bias)
+{
+    shadowPosH.xyz /= shadowPosH.w;
+    
+    float curDepth = shadowPosH.z;
+    
+    uint width, height, numMips;
+    gShadowMap.GetDimensions(0, width, height, numMips);
+    
+    float dx = 1.0 / (float) width;
+    const float2 offsets[9] =
+    {
+        float2(-dx, -dx),
+        float2(0.0, -dx),
+        float2(dx, -dx),
+        float2(-dx, 0.0),
+        float2(0.0, 0.0),
+        float2(dx, 0.0),
+        float2(-dx, dx),
+        float2(0.0, dx),
+        float2(dx, dx),
+    };
+    
+    // 1. 计算平均遮挡深度
+    float average_depth = 0.0f;
+    int SampleCount = 0;
+    [unroll]
+    for (int i = 0; i < 9; ++i)
+    {
+        float depth = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy + offsets[i]).r;
+        
+        // 平均遮挡深度
+        if (depth + bias < curDepth)
+        {
+            average_depth += depth;
+            SampleCount++;
+        }
+    }
+    
+    // 无遮挡
+    if (SampleCount < 1)
+        return 1.0;
+    
+    average_depth /= SampleCount;
+    
+    // 2. 计算滤波核大小
+    float lightSize = 10.0;
+    float RadiusSize = lightSize * (curDepth - average_depth) / average_depth;
+    RadiusSize = clamp(RadiusSize, 1.0, 5.0);
+    
+    // 3. PCF
+    float percentLit = 0.0f;
+    SampleCount = 0;
+    [unroll]
+    for (int k = -RadiusSize; k <= RadiusSize; ++k)
+    {
+        for (int m = -RadiusSize; m <= RadiusSize; ++m)
+        {
+            float2 offset = float2(k * dx, m * dx);
+            float depth = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy + offset).r;
+            if (depth + bias > curDepth)
+                percentLit += 1;
+            
+            SampleCount++;
+        }
+    }
+    
+    return percentLit / SampleCount;
+}
+
 float3 TangentToWorldSpace(float3 normalMapSample, float3 tangent, float3 normal)
 {
     float3 normalT = 2.0f * normalMapSample - 1.0f;
@@ -104,9 +174,9 @@ float EVSM(float4 shadowPosH, float bias)
 {
     shadowPosH.xyz /= shadowPosH.w;
     
+    // exp偏移
     float curDepth = shadowPosH.z;
-    curDepth = 2.0 * curDepth - 1.0f;
-    
+    //curDepth = 2.0 * curDepth - 1.0f;
     float2 Exp_depth = float2(Wrap(curDepth, 30), -Wrap(curDepth, -30));
     
     float4 SampleValue = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy);
@@ -152,7 +222,8 @@ float4 main(VertexOut input) : SV_TARGET
     
     float bias = 0.005;
     float3 shadowFactor = 1.0f;
-    shadowFactor[0] = EVSM(input.ShadowPosH, bias);
+    shadowFactor[0] = PCSS(input.ShadowPosH, bias);
+    //shadowFactor[0] = EVSM(input.ShadowPosH, bias);
     //shadowFactor[0] = VSM(input.ShadowPosH, bias);
     //shadowFactor[0] = ESM(input.ShadowPosH);
     

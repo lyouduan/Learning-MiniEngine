@@ -127,7 +127,7 @@ void GameApp::RenderScene(void)
 	//DrawSceneToDepth2Map(gfxContext);
 
 	// ESM完成之前的绘制
-	m_BlurMap->Execute(m_shadowMap->GetShadowBuffer(), 1);
+	//m_BlurMap->Execute(m_shadowMap->GetShadowBuffer(), 1);
 
 	// reset viewport and scissor
 	gfxContext.SetViewportAndScissor(m_Viewport, m_Scissor);
@@ -158,7 +158,8 @@ void GameApp::RenderScene(void)
 	// srv tables
 	gfxContext.SetDynamicDescriptors(4, 0, m_srvs.size(), &m_srvs[0]);
 	gfxContext.SetDynamicDescriptors(5, 0, m_Normalsrvs.size(), &m_Normalsrvs[0]);
-	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_BlurMap->GetOutput().GetSRV());
+	//gfxContext.SetDynamicDescriptors(6, 0, 1, &m_BlurMap->GetOutput().GetSRV());
+	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_shadowMap->GetSRV());
 
 	// draw call
 	//if (m_bRenderShapes)
