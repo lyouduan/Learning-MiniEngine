@@ -128,7 +128,7 @@ float3 TangentToWorldSpace(float3 normalMapSample, float3 tangent, float3 normal
 
 float chebyshevUpperBound(float2 moments, float depth)
 {
-    if (depth <= moments.x + 0.001)
+    if (depth <= moments.x + 0.005)
         return 1.0f;
     
     float variance = moments.y - (moments.x * moments.x);
@@ -149,6 +149,43 @@ float VSM(float4 shadowPosH, float bias)
     float2 SampleValue = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy).xy;
     
     return chebyshevUpperBound(SampleValue, curDepth);
+}
+
+
+float VSSM(float4 shadowPosH, float bias)
+{
+    shadowPosH.xyz /= shadowPosH.w;
+    
+    float curDepth = shadowPosH.z;
+    
+    // 1. 计算平均遮挡深度
+    // 利用VSM加速求平均遮挡深度
+    float average_depth = 0.0f;
+    float2 SampleValue = gShadowMap.SampleLevel(gsamLinearClamp, shadowPosH.xy, 0.0).xy;
+    
+    // p1* Zunocc + p2 * Zocc = Zavg
+    // 得到未遮挡深度的概率
+    float p1 = chebyshevUpperBound(SampleValue, curDepth);
+    // 遮挡深度的概率
+    float p2 = 1 - p1;
+    // 假设未遮挡深度等于当前深度
+    float Zunocc = curDepth;
+    // z-mean
+    float Zavg = SampleValue.x;
+    float Zocc = (Zavg - p1 * Zunocc) / p2;
+    
+    average_depth = Zocc;
+    
+    // 2. 计算滤波核大小
+    float lightSize = 50.0;
+    float RadiusSize = lightSize * (curDepth - average_depth) / average_depth;
+    RadiusSize = clamp(RadiusSize, 1.0, 5.0);
+   
+    // 3. VSM
+    float mipLevel = RadiusSize * 4.0 / 5.0;
+    float2 moment = gShadowMap.Sample(gsamLinearClamp, shadowPosH.xy, RadiusSize).xy;
+    
+    return chebyshevUpperBound(moment, curDepth);
 }
 
 
@@ -206,7 +243,7 @@ float4 main(VertexOut input) : SV_TARGET
     
     diffuseAlbedo *= gDiffuseMap[diffuseMapIndex].Sample(gsamLinearClamp, input.tex);
     
-// alpha tested
+    // alpha tested
     clip(diffuseAlbedo.a - 0.1f);
     
     float3 toEyeW = passConstants.gEyePosW - input.positionW;
@@ -222,7 +259,8 @@ float4 main(VertexOut input) : SV_TARGET
     
     float bias = 0.005;
     float3 shadowFactor = 1.0f;
-    shadowFactor[0] = PCSS(input.ShadowPosH, bias);
+    shadowFactor[0] = VSSM(input.ShadowPosH, bias);
+    //shadowFactor[0] = PCSS(input.ShadowPosH, bias);
     //shadowFactor[0] = EVSM(input.ShadowPosH, bias);
     //shadowFactor[0] = VSM(input.ShadowPosH, bias);
     //shadowFactor[0] = ESM(input.ShadowPosH);

@@ -315,5 +315,6 @@
     <FxCompile Include="shader\CSvsm.hlsl" />
     <FxCompile Include="shader\CSEsm.hlsl" />
     <FxCompile Include="shader\CSEvsm.hlsl" />
+    <FxCompile Include="shader\Mipmap.hlsl" />
   </ItemGroup>
 </Project>

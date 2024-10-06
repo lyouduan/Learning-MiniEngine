@@ -4,16 +4,18 @@
 #include <d3dcompiler.h>
 #include "GraphicsCore.h"
 #include "CommandContext.h"
+#include "GraphicsCommon.h"
 
-Blur::Blur(UINT width, UINT height, DXGI_FORMAT format)
+Blur::Blur(UINT width, UINT height, DXGI_FORMAT format, UINT mipNums)
 {
 	m_Width = width;
 	m_Height = height;
 	m_Format = format;
+	m_MipNums = mipNums;
 
 	// create buffer
-	Output0.Create(L"blur buffer", width, height, 1, format);
-	Output1.Create(L"blur buffer", width, height, 1, format);
+	Output0.Create(L"blur buffer", width, height, mipNums, format);
+	Output1.Create(L"blur buffer", width, height, mipNums, format);
 
 	CreateComputeRootSig();
 }
@@ -42,6 +44,7 @@ void Blur::CreateComputeRootSig()
 	Microsoft::WRL::ComPtr<ID3DBlob> CSvsm;
 	Microsoft::WRL::ComPtr<ID3DBlob> CSEsm;
 	Microsoft::WRL::ComPtr<ID3DBlob> CSEvsm;
+
 	D3DReadFileToBlob(L"shader/CSHorzBlur.cso", &csHorz);
 	D3DReadFileToBlob(L"shader/CSVertBlur.cso", &csVert);
 	D3DReadFileToBlob(L"shader/CSvsm.cso", &CSvsm);
@@ -77,6 +80,26 @@ void Blur::CreateComputeRootSig()
 	m_EvsmPSO.SetComputeShader(CSEvsm);
 	m_EvsmPSO.Finalize();
 	m_PSOs["evsm"] = m_EvsmPSO;
+
+	//---------------------------------
+	// Generate Mipmaps CS
+	//---------------------------------
+	m_MipmapRootSig.Reset(3, 1);
+	m_MipmapRootSig[0].InitAsConstants(0, 4);
+	m_MipmapRootSig[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_ALL);
+	m_MipmapRootSig[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 4, D3D12_SHADER_VISIBILITY_ALL);
+
+	m_MipmapRootSig.InitStaticSampler(0, Graphics::SamplerLinearWrapDesc, D3D12_SHADER_VISIBILITY_ALL);
+	m_MipmapRootSig.Finalize(L"mipmap CS rootSignature");
+
+	Microsoft::WRL::ComPtr<ID3DBlob> Mipmap;
+	D3DReadFileToBlob(L"shader/Mipmap.cso", &Mipmap);
+
+	ComputePSO m_mipmapPSO;
+	m_mipmapPSO.SetRootSignature(m_MipmapRootSig);
+	m_mipmapPSO.SetComputeShader(Mipmap);
+	m_mipmapPSO.Finalize();
+	m_PSOs["mipmap"] = m_mipmapPSO;
 }
 
 void Blur::Execute(DepthBuffer& input, int BlurCount)
@@ -91,8 +114,8 @@ void Blur::Execute(DepthBuffer& input, int BlurCount)
 	CScontext.TransitionResource(input, D3D12_RESOURCE_STATE_GENERIC_READ, true);
 	CScontext.TransitionResource(Output0, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
 
-	CScontext.SetPipelineState(m_PSOs["evsm"]);
-	//CScontext.SetPipelineState(m_PSOs["vsm"]);
+	//CScontext.SetPipelineState(m_PSOs["evsm"]);
+	CScontext.SetPipelineState(m_PSOs["vsm"]);
 	//CScontext.SetPipelineState(m_PSOs["esm"]);
 	CScontext.SetDynamicDescriptor(1, 0, input.GetDepthSRV());
 	CScontext.SetDynamicDescriptor(2, 0, Output0.GetUAV());
@@ -101,19 +124,17 @@ void Blur::Execute(DepthBuffer& input, int BlurCount)
 	UINT NumGroupsY = (UINT)ceilf(input.GetHeight() / 16.0f);
 	CScontext.Dispatch(NumGroupsX, NumGroupsY, 1);
 	CScontext.TransitionResource(Output0, D3D12_RESOURCE_STATE_GENERIC_READ, true);
-
-
-	//---------------------------------
-	// blur pass
-	//---------------------------------
-	auto weights = CalcGaussWeights(1.5f);
-	int blurRadius = (int)weights.size() / 2;
-
-	CScontext.SetConstant(0, 0, blurRadius);
-	CScontext.SetConstantArray(0, weights.size(), weights.data(), 1);
-
+	
 	for (int i = 0; i < BlurCount; ++i)
 	{
+		//---------------------------------
+		// blur pass
+		//---------------------------------
+		auto weights = CalcGaussWeights(1.5f);
+		int blurRadius = (int)weights.size() / 2;
+
+		CScontext.SetConstant(0, 0, blurRadius);
+		CScontext.SetConstantArray(0, weights.size(), weights.data(), 1);
 		// horizontal pass
 		CScontext.SetPipelineState(m_PSOs["horz"]);
 
@@ -143,6 +164,54 @@ void Blur::Execute(DepthBuffer& input, int BlurCount)
 
 	CScontext.TransitionResource(Output0, D3D12_RESOURCE_STATE_GENERIC_READ, true);
 	CScontext.TransitionResource(Output1, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+
+	CScontext.Finish(true);
+}
+
+void Blur::GenerateMipMaps()
+{
+	if (m_MipNums <= 1) return;
+	ComputeContext& CScontext = ComputeContext::Begin(L"mipmap CS");
+
+	CScontext.SetRootSignature(m_MipmapRootSig);
+
+	for (int mip = 1; mip < m_MipNums; ++mip)
+	{
+		uint32_t SrcWidth = m_Width >> (mip-1);
+		uint32_t SrcHeight = m_Height >> (mip - 1);
+		uint32_t DstWidth = SrcWidth >> 1;
+		uint32_t DstHeight = SrcHeight >> 1;
+
+		CScontext.SetPipelineState(m_PSOs["mipmap"]);
+
+		CScontext.TransitionResource(Output1, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
+		CScontext.TransitionResource(Output0, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+
+		// output0 mip0写入input1的mip1
+		CScontext.SetConstants(0, mip-1, m_MipNums, SrcWidth, DstWidth);
+
+		CScontext.SetDynamicDescriptor(1, 0, Output0.GetSRV());
+		CScontext.SetDynamicDescriptor(2, 0, Output1.GetUAV(mip));
+
+		UINT NumGroupsX = (UINT)ceilf(DstWidth / 16.0f);
+		UINT NumGroupsY = (UINT)ceilf(DstHeight / 16.0f);
+		CScontext.Dispatch(NumGroupsX, NumGroupsY, 1);
+
+		CScontext.TransitionResource(Output0, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
+		CScontext.TransitionResource(Output1, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+		
+		// input1 mip 1 写入 input0 mip 1
+		CScontext.SetConstants(0, mip, m_MipNums, SrcWidth, DstWidth);
+		CScontext.SetDynamicDescriptor(1, 0, Output1.GetSRV());
+		CScontext.SetDynamicDescriptor(2, 0, Output0.GetUAV(mip));
+		
+		NumGroupsX = (UINT)ceilf(DstWidth / 16.0f);
+		NumGroupsY = (UINT)ceilf(DstHeight / 16.0f);
+		CScontext.Dispatch(NumGroupsX, NumGroupsY, 1);
+
+		CScontext.TransitionResource(Output0, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+		CScontext.TransitionResource(Output1, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+	}
 
 	CScontext.Finish(true);
 }
