@@ -162,6 +162,8 @@ void GameApp::RenderScene(void)
 
 	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(camera.GetViewProjMatrix()));
 	//XMStoreFloat4x4(&passConstant.ShadowTransform, XMMatrixTranspose(m_shadowMap->GetShadowTransform()));
+	XMStoreFloat4x4(&passConstant.ShadowTransform, XMMatrixTranspose(m_CSM->GetShadowTransform(1)));
+
 	for (int i = 0; i < 5; ++i)
 	{
 		XMStoreFloat4x4(&passConstant.CSShadowTransform[i], XMMatrixTranspose(m_CSM->GetShadowTransform(i)));
@@ -176,7 +178,8 @@ void GameApp::RenderScene(void)
 	// srv tables
 	gfxContext.SetDynamicDescriptors(4, 0, m_srvs.size(), &m_srvs[0]);
 	gfxContext.SetDynamicDescriptors(5, 0, m_Normalsrvs.size(), &m_Normalsrvs[0]);
-	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_BlurMap->GetOutput().GetSRV());
+	//gfxContext.SetDynamicDescriptors(6, 0, 1, &m_BlurMap->GetOutput().GetSRV());
+	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_CSM->GetSRV(1));
 	gfxContext.SetDynamicDescriptors(7, 0, 5, &m_CSM->GetSRV());
 
 	//gfxContext.SetDynamicDescriptors(6, 0, 1, &m_shadowMap->GetSRV());
@@ -452,7 +455,8 @@ void GameApp::DrawSceneToCSM(GraphicsContext& gfxContext)
 
 		gfxContext.SetRenderTargets(0, nullptr, m_CSM->GetDSV(i));
 
-		XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(m_CSM->GetLightView() * m_CSM->GetLightProj(i)));
+		XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(m_CSM->GetLightView(i) * m_CSM->GetLightProj(i)));
+
 		gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
 		// structured buffer

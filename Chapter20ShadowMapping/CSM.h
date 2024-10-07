@@ -33,7 +33,7 @@ public:
 	D3D12_VIEWPORT Viewport() const { return m_Viewport; }
 	D3D12_RECT ScissorRect() const { return m_ScissorRect; }
 
-	DirectX::XMMATRIX GetLightView() const { return m_LightView; }
+	DirectX::XMMATRIX GetLightView(int i ) const { return m_LightView[i]; }
 	DirectX::XMMATRIX GetLightProj(int i) const { return m_LightProjection[i]; }
 	DirectX::XMMATRIX GetShadowTransform(int i) const { return m_ShadowTransform[i]; }
 
@@ -52,10 +52,10 @@ private:
 	D3D12_RECT m_ScissorRect;
 
 	DirectX::XMVECTOR m_LightDir;
-	DirectX::XMMATRIX m_LightView;
 	float m_FOV;
 	float m_AspectRatio;
 	DirectX::XMMATRIX m_CameraView;
+	std::vector<DirectX::XMMATRIX> m_LightView;
 	std::vector<DirectX::XMMATRIX> m_LightProjection;
 	std::vector<DirectX::XMMATRIX> m_ShadowTransform;
 };

@@ -86,7 +86,7 @@ XMMATRIX CSM::setLightSpaceMatrix(
 	int size = frustumCorners.size();
 	center /= XMVectorSet(size, size, size, size);
 
-	m_LightView = XMMatrixLookToLH(m_LightDir, center, XMVectorSet(0.0, 1.0, 0.0, 0.0));
+	const auto lightView = XMMatrixLookAtLH(center - 10 * m_LightDir, center, XMVectorSet(0.0, 1.0, 0.0, 0.0));
 
 	float minX = std::numeric_limits<float>::max();
 	float maxX = std::numeric_limits<float>::lowest();
@@ -97,7 +97,7 @@ XMMATRIX CSM::setLightSpaceMatrix(
 
 	for (const auto& v : frustumCorners)
 	{
-		const auto trf = XMVector4Transform(v, m_LightView);
+		const auto trf = XMVector4Transform(v, lightView);
 		minX = std::min(minX, trf[0]);
 		maxX = std::max(maxX, trf[0]);
 		minY = std::min(minY, trf[1]);
@@ -127,7 +127,17 @@ XMMATRIX CSM::setLightSpaceMatrix(
 
 	const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(minX, maxX, minY, maxY, minZ, maxZ);
 
+	//Transform NDC space[-1, +1] ^ 2 to texture space[0, 1] ^ 2
+	XMMATRIX T(
+		0.5f, 0.0f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.0f, 1.0f);
 
+	m_ShadowTransform.push_back(lightView * lightProjection * T);
+
+	m_LightView.push_back(lightView);
+	
 	return lightProjection;
 }
 
@@ -151,18 +161,7 @@ void CSM::divideFrustums(float NearZ, float FarZ)
 			m_LightProjection.push_back(setLightSpaceMatrix(shadowCascadeLevels[i - 1], FarZ));
 		}
 	}
-
-	//Transform NDC space[-1, +1] ^ 2 to texture space[0, 1] ^ 2
-	XMMATRIX T(
-		0.5f, 0.0f, 0.0f, 0.0f,
-		0.0f, -0.5f, 0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f, 0.0f,
-		0.5f, 0.5f, 0.0f, 1.0f);
-
-	for (auto& lp : m_LightProjection)
-	{
-		m_ShadowTransform.push_back(m_LightView * lp * T);
-	}
+	
 }
 
 void CSM::setToLightDir(DirectX::XMFLOAT3 _lightDir, float fov, float aspect, DirectX::XMMATRIX cameraView)
