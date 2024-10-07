@@ -29,6 +29,7 @@ struct PassConstants
 {
     float4x4 gViewProj;
     float4x4 gShadowTransform;
+    float4x4 gCSShadowTransform[5];
     float3 gEyePosW;
     float pad0;
     float4 gAmbientLight;
@@ -59,6 +60,7 @@ TextureCube gCubeMap : register(t0);
 Texture2D gDiffuseMap[8] : register(t1);
 Texture2D gNormalMap[3] : register(t1, space1);
 Texture2D gShadowMap : register(t1, space2);
+Texture2D gShadowMaps[5] : register(t1, space3);
 // structured buffer
 StructuredBuffer<MaterialData> gMaterialData : register(t0, space1);
 
@@ -79,6 +81,7 @@ struct VertexOut
     float2 tex : TEXCOORD;
     float3 tangentW : TANGENT;
     float4 ShadowPosH : POSITION1; // only omit at last one
+    float4 CSMPosH : POSITION2; // only omit at last one
     float depth : TEXCOORD1; // only omit at last one
     float4 positionH : SV_Position; // only omit at last one
 };

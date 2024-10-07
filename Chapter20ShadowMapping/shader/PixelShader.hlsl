@@ -1,6 +1,44 @@
 #include "common.hlsli"
 #include "LightingUtil.hlsli"
 
+float CSM_PCF(float4 shadowPosH, float bias)
+{
+    shadowPosH.xyz /= shadowPosH.w;
+    
+    float curDepth = shadowPosH.z;
+    
+    // PCF
+    uint width, height, numMips;
+    gShadowMap.GetDimensions(0, width, height, numMips);
+    
+    float dx = 1.0 / (float) width;
+    const float2 offsets[9] =
+    {
+        float2(-dx, -dx),
+        float2(0.0, -dx),
+        float2(dx, -dx),
+        float2(-dx, 0.0),
+        float2(0.0, 0.0),
+        float2(dx, 0.0),
+        float2(-dx, dx),
+        float2(0.0, dx),
+        float2(dx, dx),
+    };
+    
+    float percentLit = 0.0f;
+    
+    [unroll]
+    for (int i = 0; i < 9; ++i)
+    {
+        float depth = gShadowMaps[0].Sample(gsamLinearClamp, shadowPosH.xy + offsets[i]).r;
+        
+        if (depth + bias > curDepth)
+            percentLit += 1;
+    }
+    
+    return percentLit / 9.0;
+}
+
 float PCF(float4 shadowPosH, float bias)
 {
     shadowPosH.xyz /= shadowPosH.w;
@@ -259,7 +297,8 @@ float4 main(VertexOut input) : SV_TARGET
     
     float bias = 0.005;
     float3 shadowFactor = 1.0f;
-    shadowFactor[0] = VSSM(input.ShadowPosH, bias);
+    shadowFactor[0] = CSM_PCF(input.CSMPosH, bias);
+    //shadowFactor[0] = VSSM(input.ShadowPosH, bias);
     //shadowFactor[0] = PCSS(input.ShadowPosH, bias);
     //shadowFactor[0] = EVSM(input.ShadowPosH, bias);
     //shadowFactor[0] = VSM(input.ShadowPosH, bias);

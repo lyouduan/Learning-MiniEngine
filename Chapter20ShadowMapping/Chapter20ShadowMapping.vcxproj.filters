@@ -129,6 +129,9 @@
     <ClCompile Include="Blur.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CSM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Command\CommandAllocatorPool.h">
@@ -285,6 +288,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Blur.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CSM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

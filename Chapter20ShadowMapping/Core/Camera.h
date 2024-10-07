@@ -96,6 +96,7 @@ namespace Math
 			UpdateProjMatrix();
 		}
 
+		float GetAspectRatio() const { return m_AspectRatio; }
 		float GetFOV() const { return m_VerticalFOV; }
 		float GetNearClip() const { return m_NearClip; }
 		float GetFarClip() const { return m_FarClip; }

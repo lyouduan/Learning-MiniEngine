@@ -12,6 +12,7 @@
 #include "Camera.h"
 #include "ShadowMap.h"
 #include "Blur.h"
+#include "CSM.h"
 
 enum class RenderLayer : int
 {
@@ -71,6 +72,7 @@ private:
 	void DrawSceneToCubeMap(GraphicsContext& gfxContext);
 
 	void DrawSceneToShadowMap(GraphicsContext& gfxContext);
+	void DrawSceneToCSM(GraphicsContext& gfxContext);
 	void DrawSceneToDepth2Map(GraphicsContext& gfxContext);
 
 	void BuildCubeFaceCamera(float x=0.0, float y=0.0, float z=0.0);
@@ -147,6 +149,7 @@ private:
 	// shadow map
 	std::unique_ptr<ShadowMap> m_shadowMap;
 	std::unique_ptr<Blur> m_BlurMap;
+	std::unique_ptr<CSM> m_CSM;
 
 	// camera
 	Math::Camera camera;

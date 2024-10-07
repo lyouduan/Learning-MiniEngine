@@ -65,6 +65,8 @@ void GameApp::Startup(void)
 	// create shadowMap
 	m_shadowMap = std::make_unique<ShadowMap>(1024, 1024, DXGI_FORMAT_D32_FLOAT);
 
+	// 划分为5个视锥体
+	m_CSM = std::make_unique<CSM>(1024, 1024, DXGI_FORMAT_D32_FLOAT, 5);
 
 	// set PSO and Root Signature
 	SetPsoAndRootSig();
@@ -99,6 +101,11 @@ void GameApp::Update(float deltaT)
 	// update shadow info
 	UpdateShadowTranform(deltaT);
 
+	// update CSM info
+	m_CSM->setToLightDir(passConstant.Lights[0].Direction, camera.GetFOV(), camera.GetAspectRatio(), camera.GetViewMatrix());
+	m_CSM->divideFrustums(camera.GetNearClip(), camera.GetFarClip());
+
+
 	totalTime += deltaT * 0.1;
 	// animate the skull around the center sphere
 	XMMATRIX skullScale = XMMatrixScaling(0.2f, 0.2f, 0.2f);
@@ -113,6 +120,9 @@ void GameApp::Update(float deltaT)
 	// switch the scene
 	if (GameInput::IsFirstPressed(GameInput::kKey_f1))
 		m_bRenderShapes = !m_bRenderShapes;
+
+	
+
 }
 
 void GameApp::RenderScene(void)
@@ -123,6 +133,8 @@ void GameApp::RenderScene(void)
 	DrawSceneToCubeMap(gfxContext);
 
 	DrawSceneToShadowMap(gfxContext);
+
+	DrawSceneToCSM(gfxContext);
 
 	//DrawSceneToDepth2Map(gfxContext);
 
@@ -149,7 +161,12 @@ void GameApp::RenderScene(void)
 	gfxContext.SetRootSignature(m_RootSignature);
 
 	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(camera.GetViewProjMatrix()));
-	XMStoreFloat4x4(&passConstant.ShadowTransform, XMMatrixTranspose(m_shadowMap->GetShadowTransform()));
+	//XMStoreFloat4x4(&passConstant.ShadowTransform, XMMatrixTranspose(m_shadowMap->GetShadowTransform()));
+	for (int i = 0; i < 5; ++i)
+	{
+		XMStoreFloat4x4(&passConstant.CSShadowTransform[i], XMMatrixTranspose(m_CSM->GetShadowTransform(i)));
+	}
+
 	XMStoreFloat3(&passConstant.eyePosW, camera.GetPosition());
 	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
@@ -160,6 +177,8 @@ void GameApp::RenderScene(void)
 	gfxContext.SetDynamicDescriptors(4, 0, m_srvs.size(), &m_srvs[0]);
 	gfxContext.SetDynamicDescriptors(5, 0, m_Normalsrvs.size(), &m_Normalsrvs[0]);
 	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_BlurMap->GetOutput().GetSRV());
+	gfxContext.SetDynamicDescriptors(7, 0, 5, &m_CSM->GetSRV());
+
 	//gfxContext.SetDynamicDescriptors(6, 0, 1, &m_shadowMap->GetSRV());
 
 	// draw call
@@ -191,7 +210,7 @@ void GameApp::RenderScene(void)
 void GameApp::SetPsoAndRootSig()
 {
 	// initialize root signature
-	m_RootSignature.Reset(7, 1);
+	m_RootSignature.Reset(8, 1);
 	m_RootSignature[0].InitAsConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL);
 	m_RootSignature[1].InitAsConstantBuffer(1, D3D12_SHADER_VISIBILITY_ALL);
 	m_RootSignature[2].InitAsBufferSRV(0, D3D12_SHADER_VISIBILITY_ALL, 1);
@@ -199,6 +218,7 @@ void GameApp::SetPsoAndRootSig()
 	m_RootSignature[4].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, m_srvs.size());
 	m_RootSignature[5].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, m_Normalsrvs.size(), D3D12_SHADER_VISIBILITY_ALL, 1);
 	m_RootSignature[6].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, D3D12_SHADER_VISIBILITY_ALL, 2);
+	m_RootSignature[7].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5, D3D12_SHADER_VISIBILITY_ALL, 3);
 	// sampler
 	m_RootSignature.InitStaticSampler(0, Graphics::SamplerLinearWrapDesc, D3D12_SHADER_VISIBILITY_PIXEL);
 
@@ -414,6 +434,37 @@ void GameApp::DrawSceneToShadowMap(GraphicsContext& gfxContext)
 	}
 	
 	gfxContext.TransitionResource(m_shadowMap->GetShadowBuffer(), D3D12_RESOURCE_STATE_GENERIC_READ, true);
+}
+
+void GameApp::DrawSceneToCSM(GraphicsContext& gfxContext)
+{
+	// 
+	gfxContext.SetViewportAndScissor(m_CSM->Viewport(), m_CSM->ScissorRect());
+
+	gfxContext.SetRootSignature(m_RootSignature);
+
+	for (int i = 0; i < 5; ++i)
+	{
+		// transition buffer to depth write
+		gfxContext.TransitionResource(m_CSM->GetShadowBuffer(i), D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+
+		gfxContext.ClearDepth(m_CSM->GetShadowBuffer(i));
+
+		gfxContext.SetRenderTargets(0, nullptr, m_CSM->GetDSV(i));
+
+		XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(m_CSM->GetLightView() * m_CSM->GetLightProj(i)));
+		gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
+
+		// structured buffer
+		gfxContext.SetBufferSRV(2, matBuffer);
+
+		gfxContext.SetPipelineState(m_PSOs["shadow"]);
+
+		// draw call
+		DrawRenderItems(gfxContext, m_ShapeRenders[(int)RenderLayer::Shadow]);
+
+		gfxContext.TransitionResource(m_CSM->GetShadowBuffer(i), D3D12_RESOURCE_STATE_GENERIC_READ, true);
+	}
 }
 
 void GameApp::DrawSceneToDepth2Map(GraphicsContext& gfxContext)

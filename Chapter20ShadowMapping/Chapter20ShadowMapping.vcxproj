@@ -54,6 +54,7 @@
     <ClCompile Include="Core\Utils\pch.cpp" />
     <ClCompile Include="Core\Utils\Utility.cpp" />
     <ClCompile Include="Core\Utils\Waves.cpp" />
+    <ClCompile Include="CSM.cpp" />
     <ClCompile Include="GameApp.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Core\ShadowMap.cpp" />
@@ -108,6 +109,7 @@
     <ClInclude Include="Core\Utils\Utility.h" />
     <ClInclude Include="Core\Utils\VectorMath.h" />
     <ClInclude Include="Core\Utils\Waves.h" />
+    <ClInclude Include="CSM.h" />
     <ClInclude Include="d3dUtil.h" />
     <ClInclude Include="GameApp.h" />
     <ClInclude Include="Core\ShadowMap.h" />
