@@ -16,9 +16,11 @@ public:
 		float NearZ,
 		float FarZ);
 
+	DirectX::XMMATRIX SetPerspectiveMatrix(float verticalFovRadians, float aspectHeightOverWidth, float nearZClip, float farZClip);
+
 	void divideFrustums(float NearZ, float FarZ);
 
-	void setToLightDir(DirectX::XMFLOAT3 _lightDir, float fov, float aspect, DirectX::XMMATRIX cameraProj);
+	void setToLightDir(DirectX::XMFLOAT3 _lightDir, float fov, float aspect, DirectX::XMMATRIX cameraView);
 
 	DepthBuffer& GetShadowBuffer(int i) { return m_ShadowMaps[i]; }
 
@@ -37,6 +39,9 @@ public:
 	DirectX::XMMATRIX GetLightProj(int i) const { return m_LightProjection[i]; }
 	DirectX::XMMATRIX GetShadowTransform(int i) const { return m_ShadowTransform[i]; }
 
+	UINT GetLevels() const { return m_Levels; }
+
+
 private:
 
 	// depth texture array
@@ -47,6 +52,7 @@ private:
 	DXGI_FORMAT m_Format;
 	UINT m_Width;
 	UINT m_Height;
+	UINT m_Levels;
 
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_ScissorRect;

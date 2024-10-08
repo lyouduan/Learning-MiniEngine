@@ -20,7 +20,26 @@ VertexOut main(VertexIn input)
    
     // 将世界坐标的点，转换到阴影贴图的纹理坐标空间
     output.ShadowPosH = mul(posW, passConstants.gShadowTransform);
-    output.CSMPosH = mul(posW, passConstants.gCSShadowTransform[0]);
+    
+    // //0-10, 10-50, 50-100, 100-1000
+    float cascadePlaneDistances[3] = { 10, 20, 100.0 };
+    int layer = -1;
+    for (int i = 0; i < 3; ++i)
+    {
+        if (output.positionH.z < cascadePlaneDistances[i])
+        {
+            layer = i;
+            break;
+        }
+    }
+    if (layer == -1)
+    {
+        layer = 3;
+    }
+    
+    output.index = layer;
+    output.CSMPosH = mul(posW, passConstants.gCSShadowTransform[layer]);
+    
     
     return output;
 }

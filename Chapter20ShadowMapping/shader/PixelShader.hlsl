@@ -1,7 +1,7 @@
 #include "common.hlsli"
 #include "LightingUtil.hlsli"
 
-float CSM_PCF(float4 shadowPosH, float bias)
+float CSM_PCF(float4 shadowPosH, float bias, float index)
 {
     shadowPosH.xyz /= shadowPosH.w;
     
@@ -30,7 +30,7 @@ float CSM_PCF(float4 shadowPosH, float bias)
     [unroll]
     for (int i = 0; i < 9; ++i)
     {
-        float depth = gShadowMaps[0].Sample(gsamLinearClamp, shadowPosH.xy + offsets[i]).r;
+        float depth = gShadowMaps[index].Sample(gsamLinearClamp, shadowPosH.xy + offsets[i]).r;
         
         if (depth + bias > curDepth)
             percentLit += 1;
@@ -297,7 +297,7 @@ float4 main(VertexOut input) : SV_TARGET
     
     float bias = 0.005;
     float3 shadowFactor = 1.0f;
-    shadowFactor[0] = CSM_PCF(input.CSMPosH, bias);
+    shadowFactor[0] = CSM_PCF(input.CSMPosH, bias, input.index);
     //shadowFactor[0] = VSSM(input.ShadowPosH, bias);
     //shadowFactor[0] = PCSS(input.ShadowPosH, bias);
     //shadowFactor[0] = EVSM(input.ShadowPosH, bias);

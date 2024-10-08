@@ -83,6 +83,7 @@ struct VertexOut
     float4 ShadowPosH : POSITION1; // only omit at last one
     float4 CSMPosH : POSITION2; // only omit at last one
     float depth : TEXCOORD1; // only omit at last one
+    float index : TEXCOORD2; // only omit at last one
     float4 positionH : SV_Position; // only omit at last one
 };
 

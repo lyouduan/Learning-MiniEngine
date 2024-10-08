@@ -65,8 +65,8 @@ void GameApp::Startup(void)
 	// create shadowMap
 	m_shadowMap = std::make_unique<ShadowMap>(1024, 1024, DXGI_FORMAT_D32_FLOAT);
 
-	// 划分为5个视锥体
-	m_CSM = std::make_unique<CSM>(1024, 1024, DXGI_FORMAT_D32_FLOAT, 5);
+	// 划分为4个视锥体
+	m_CSM = std::make_unique<CSM>(2048, 2048, DXGI_FORMAT_D32_FLOAT, 4);
 
 	// set PSO and Root Signature
 	SetPsoAndRootSig();
@@ -162,9 +162,9 @@ void GameApp::RenderScene(void)
 
 	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(camera.GetViewProjMatrix()));
 	//XMStoreFloat4x4(&passConstant.ShadowTransform, XMMatrixTranspose(m_shadowMap->GetShadowTransform()));
-	XMStoreFloat4x4(&passConstant.ShadowTransform, XMMatrixTranspose(m_CSM->GetShadowTransform(1)));
+	XMStoreFloat4x4(&passConstant.ShadowTransform, XMMatrixTranspose(m_CSM->GetShadowTransform(2)));
 
-	for (int i = 0; i < 5; ++i)
+	for (int i = 0; i < m_CSM->GetLevels(); ++i)
 	{
 		XMStoreFloat4x4(&passConstant.CSShadowTransform[i], XMMatrixTranspose(m_CSM->GetShadowTransform(i)));
 	}
@@ -179,8 +179,8 @@ void GameApp::RenderScene(void)
 	gfxContext.SetDynamicDescriptors(4, 0, m_srvs.size(), &m_srvs[0]);
 	gfxContext.SetDynamicDescriptors(5, 0, m_Normalsrvs.size(), &m_Normalsrvs[0]);
 	//gfxContext.SetDynamicDescriptors(6, 0, 1, &m_BlurMap->GetOutput().GetSRV());
-	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_CSM->GetSRV(1));
-	gfxContext.SetDynamicDescriptors(7, 0, 5, &m_CSM->GetSRV());
+	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_CSM->GetSRV(2));
+	gfxContext.SetDynamicDescriptors(7, 0, m_CSM->GetLevels(), &m_CSM->GetSRV());
 
 	//gfxContext.SetDynamicDescriptors(6, 0, 1, &m_shadowMap->GetSRV());
 
@@ -446,7 +446,7 @@ void GameApp::DrawSceneToCSM(GraphicsContext& gfxContext)
 
 	gfxContext.SetRootSignature(m_RootSignature);
 
-	for (int i = 0; i < 5; ++i)
+	for (int i = 0; i < m_CSM->GetLevels(); ++i)
 	{
 		// transition buffer to depth write
 		gfxContext.TransitionResource(m_CSM->GetShadowBuffer(i), D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
