@@ -1,0 +1,17 @@
+cbuffer cbSettings : register(b0)
+{
+	
+};
+
+Texture2D<float> gInput : register(t0);
+RWTexture2D<float> gOutput : register(u0);
+
+[numthreads(16, 16, 1)]
+void main(int3 dispatchThreadID : SV_DispatchThreadID)
+{
+    float Depth = gInput[dispatchThreadID.xy];
+    //gOutput[dispatchThreadID.xy] = float2(Depth, Depth * Depth);
+    
+    // esm : exp(cd)
+    gOutput[dispatchThreadID.xy] = exp(80 * Depth);
+}
