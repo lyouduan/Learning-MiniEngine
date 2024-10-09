@@ -107,7 +107,7 @@ XMMATRIX CSM::setLightSpaceMatrix(
 	}
 
 	// Tune this parameter according to the scene
-	constexpr float zMult = 1.0f;
+	constexpr float zMult = 5.0f;
 	if (minZ < 0)
 	{
 		minZ *= zMult;
@@ -116,15 +116,7 @@ XMMATRIX CSM::setLightSpaceMatrix(
 	{
 		minZ /= zMult;
 	}
-	if (maxZ < 0)
-	{
-		maxZ /= zMult;
-	}
-	else
-	{
-		maxZ *= zMult;
-	}
-
+	
 	const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(minX*1.5, maxX * 1.5, minY * 1.5, maxY * 1.5, maxZ, minZ);
 
 	//Transform NDC space[-1, +1] ^ 2 to texture space[0, 1] ^ 2

@@ -160,7 +160,8 @@ void GameApp::RenderScene(void)
 
 	gfxContext.SetRootSignature(m_RootSignature);
 
-	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(camera.GetViewProjMatrix()));
+	XMStoreFloat4x4(&passConstant.View, XMMatrixTranspose(camera.GetViewMatrix()));
+	XMStoreFloat4x4(&passConstant.Proj, XMMatrixTranspose(camera.GetProjMatrix()));
 	//XMStoreFloat4x4(&passConstant.ShadowTransform, XMMatrixTranspose(m_shadowMap->GetShadowTransform()));
 	XMStoreFloat4x4(&passConstant.ShadowTransform, XMMatrixTranspose(m_CSM->GetShadowTransform(2)));
 
@@ -390,7 +391,8 @@ void GameApp::DrawSceneToCubeMap(GraphicsContext& gfxContext)
 		gfxContext.SetRenderTarget(g_SceneCubeMapBuffer.GetRTV(i), g_CubeMapDepthBuffer.GetDSV());
 
 		// update passCB
-		XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(cubeCamera[i].GetViewProjMatrix()));
+		XMStoreFloat4x4(&passConstant.View, XMMatrixTranspose(cubeCamera[i].GetViewMatrix()));
+		XMStoreFloat4x4(&passConstant.Proj, XMMatrixTranspose(cubeCamera[i].GetProjMatrix()));
 		XMStoreFloat3(&passConstant.eyePosW, cubeCamera[i].GetPosition());
 		gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
@@ -420,7 +422,8 @@ void GameApp::DrawSceneToShadowMap(GraphicsContext& gfxContext)
 
 	gfxContext.SetRootSignature(m_RootSignature);
 
-	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(m_shadowMap->GetLightView() * m_shadowMap->GetLightProj()));
+	XMStoreFloat4x4(&passConstant.View, XMMatrixTranspose(m_shadowMap->GetLightView()));
+	XMStoreFloat4x4(&passConstant.Proj, XMMatrixTranspose(m_shadowMap->GetLightProj()));
 	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
 	// structured buffer
@@ -455,7 +458,8 @@ void GameApp::DrawSceneToCSM(GraphicsContext& gfxContext)
 
 		gfxContext.SetRenderTargets(0, nullptr, m_CSM->GetDSV(i));
 
-		XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(m_CSM->GetLightView(i) * m_CSM->GetLightProj(i)));
+		XMStoreFloat4x4(&passConstant.View, XMMatrixTranspose(m_CSM->GetLightView(i)));
+		XMStoreFloat4x4(&passConstant.Proj, XMMatrixTranspose(m_CSM->GetLightProj(i)));
 
 		gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
@@ -492,7 +496,8 @@ void GameApp::DrawSceneToDepth2Map(GraphicsContext& gfxContext)
 
 	gfxContext.SetRootSignature(m_RootSignature);
 
-	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(m_shadowMap->GetLightView() * m_shadowMap->GetLightProj()));
+	XMStoreFloat4x4(&passConstant.View, XMMatrixTranspose(m_shadowMap->GetLightView()));
+	XMStoreFloat4x4(&passConstant.Proj, XMMatrixTranspose(m_shadowMap->GetLightProj()));
 	gfxContext.SetDynamicConstantBufferView(1, sizeof(passConstant), &passConstant);
 
 	// structured buffer
@@ -1307,7 +1312,8 @@ void GameApp::LoadTextures()
 void GameApp::UpdatePassCB(float deltaT)
 {
 	// up
-	XMStoreFloat4x4(&passConstant.ViewProj, XMMatrixTranspose(camera.GetViewProjMatrix())); // hlsl 列主序矩阵
+	XMStoreFloat4x4(&passConstant.View, XMMatrixTranspose(camera.GetViewMatrix())); // hlsl 列主序矩阵
+	XMStoreFloat4x4(&passConstant.Proj, XMMatrixTranspose(camera.GetProjMatrix())); // hlsl 列主序矩阵
 
 	// light
 	XMVECTOR lightDir = -DirectX::XMVectorSet(

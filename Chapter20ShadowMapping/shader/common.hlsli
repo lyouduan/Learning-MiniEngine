@@ -27,7 +27,8 @@ struct Light
 
 struct PassConstants
 {
-    float4x4 gViewProj;
+    float4x4 gView;
+    float4x4 gProj;
     float4x4 gShadowTransform;
     float4x4 gCSShadowTransform[5];
     float3 gEyePosW;

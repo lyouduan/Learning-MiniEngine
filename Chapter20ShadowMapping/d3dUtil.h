@@ -82,7 +82,8 @@ __declspec(align(16)) struct ObjConstants
 #define MaxLights 16
 __declspec(align(16)) struct PassConstants
 {
-	DirectX::XMFLOAT4X4 ViewProj;
+	DirectX::XMFLOAT4X4 View;
+	DirectX::XMFLOAT4X4 Proj;
 	DirectX::XMFLOAT4X4 ShadowTransform;
 	DirectX::XMFLOAT4X4 CSShadowTransform[5];
 	DirectX::XMFLOAT3 eyePosW = {0.0, 0.0, 0.0};

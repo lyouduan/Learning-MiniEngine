@@ -7,8 +7,9 @@ VertexOut main(VertexIn input)
     //MaterialData matData = gMaterialData[objConstants.gMaterialIndex];
     
     float4 posW = mul(float4(input.position, 1.0), objConstants.gWorld);
+    
     output.positionW = posW.xyz;
-    output.positionH = mul(posW, passConstants.gViewProj);
+    output.positionH = mul(posW, mul(passConstants.gView, passConstants.gProj));
     
     // Assumes nonuniform scaling; otherwise, need to use inverse-transpose of world matrix.
     output.normal = mul(input.normal, (float3x3)objConstants.gWorld);
