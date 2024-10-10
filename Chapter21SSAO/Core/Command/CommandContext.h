@@ -220,6 +220,7 @@ public:
 	void SetDynamicSamplers(UINT RootIndex, UINT Offset, UINT Count, const D3D12_CPU_DESCRIPTOR_HANDLE Handles[]);
 
 	void SetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW& IBView);
+	void SetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW IBView[]);
 	void SetVertexBuffer(UINT Slot, const D3D12_VERTEX_BUFFER_VIEW& VBView);
 	void SetVertexBuffers(UINT StartSlot, UINT Count, const D3D12_VERTEX_BUFFER_VIEW VBViews[]);
 	void SetDynamicVB(UINT Slot, size_t NumVertices, size_t VertexStride, const void* VBData);
@@ -317,6 +318,11 @@ inline void GraphicsContext::SetVertexBuffers(UINT StartSlot, UINT Count, const 
 inline void GraphicsContext::SetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW& IBView)
 {
 	m_CommandList->IASetIndexBuffer(&IBView);
+}
+
+inline void GraphicsContext::SetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW IBView[])
+{
+	m_CommandList->IASetIndexBuffer(IBView);
 }
 
 inline void GraphicsContext::SetDescriptorTable(UINT RootIndex, D3D12_GPU_DESCRIPTOR_HANDLE FirstHandle)

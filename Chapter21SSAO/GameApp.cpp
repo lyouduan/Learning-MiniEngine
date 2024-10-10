@@ -170,9 +170,11 @@ void GameApp::RenderScene(void)
 	// srv tables
 	gfxContext.SetDynamicDescriptors(4, 0, m_srvs.size(), &m_srvs[0]);
 	gfxContext.SetDynamicDescriptors(5, 0, m_Normalsrvs.size(), &m_Normalsrvs[0]);
+
+	// debug Quad
+	//gfxContext.SetDynamicDescriptors(6, 0, 1, &m_shadowMap->GetSRV());
 	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_BlurMap->GetOutput().GetSRV());
 
-	//gfxContext.SetDynamicDescriptors(6, 0, 1, &m_shadowMap->GetSRV());
 
 	// draw call
 	//if (m_bRenderShapes)
@@ -188,6 +190,7 @@ void GameApp::RenderScene(void)
 
 	// debug shadow map
 	gfxContext.SetPipelineState(m_PSOs["debug"]);
+	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_SSAO->GetNormalSRV());
 	DrawRenderItems(gfxContext, m_ShapeRenders[(int)RenderLayer::Quad]);
 
 	// draw sky box at last
@@ -332,7 +335,8 @@ void GameApp::SetPsoAndRootSig()
 
 	// PSO
 	GraphicsPSO normalPSO = opaquePSO;
-	opaquePSO.SetRenderTargetFormat(m_SSAO->GetNormalFormat(), DepthFormat);
+	DXGI_FORMAT formats[] = {m_SSAO->GetNormalFormat(), m_SSAO->GetNormalFormat()};
+	normalPSO.SetRenderTargetFormats(2, formats, DepthFormat);
 	normalPSO.SetPixelShader(NormalPS);
 	normalPSO.Finalize();
 	m_PSOs["normal"] = normalPSO;
@@ -486,23 +490,24 @@ void GameApp::DrawSceneToDepth2Map(GraphicsContext& gfxContext)
 void GameApp::DrawSceneToNormal(GraphicsContext& gfxContext)
 {
 
-	gfxContext.SetViewportAndScissor(m_SSAO->Viewport(), m_SSAO->ScissorRect());
+	gfxContext.SetViewportAndScissor(m_Viewport, m_Scissor);
 
 	gfxContext.TransitionResource(m_SSAO->GetNormalMap(), D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	gfxContext.TransitionResource(m_SSAO->GetPosMAP(), D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 	gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 	// clear RTV color
-	m_SSAO->GetNormalMap().SetClearColor(Color{ 0.0f, 0.0f, 0.0f, 1.0f });
 	gfxContext.ClearColor(m_SSAO->GetNormalMap());
+	gfxContext.ClearColor(m_SSAO->GetPosMAP());
 
 	// clear DSV
 	gfxContext.ClearDepth(g_SceneDepthBuffer);
 
 	// set RTV and DSV
-	gfxContext.SetRenderTarget(m_SSAO->GetNormalRTV(), g_SceneDepthBuffer.GetDSV());
+	const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle[] = {m_SSAO->GetNormalRTV() , m_SSAO->GetPosRTV()};
+	gfxContext.SetRenderTargets(2, rtvHandle, g_SceneDepthBuffer.GetDSV());
 
 	gfxContext.SetRootSignature(m_RootSignature);
-	gfxContext.SetPipelineState(m_PSOs["normal"]);
 
 	XMStoreFloat3(&passConstant.eyePosW, camera.GetPosition());
 	XMStoreFloat4x4(&passConstant.View, XMMatrixTranspose(camera.GetViewMatrix()));
@@ -518,16 +523,17 @@ void GameApp::DrawSceneToNormal(GraphicsContext& gfxContext)
 	gfxContext.SetDynamicDescriptors(5, 0, m_Normalsrvs.size(), &m_Normalsrvs[0]);
 
 	{
-		gfxContext.SetPipelineState(m_PSOs["opaque"]);
+		gfxContext.SetPipelineState(m_PSOs["normal"]);
+
 		DrawRenderItems(gfxContext, m_ShapeRenders[(int)RenderLayer::Opaque]);
 	}
 
 	// dynamic cube mapping
-	gfxContext.SetPipelineState(m_PSOs["opaque"]);
 	gfxContext.SetDynamicDescriptor(3, 0, g_SceneCubeMapBuffer.GetSRV());
 	DrawRenderItems(gfxContext, m_ShapeRenders[(int)RenderLayer::OpaqueDynamicReflectors]);
 
 	gfxContext.TransitionResource(m_SSAO->GetNormalMap(), D3D12_RESOURCE_STATE_PRESENT, true);
+	gfxContext.TransitionResource(m_SSAO->GetPosMAP(), D3D12_RESOURCE_STATE_PRESENT, true);
 
 }
 

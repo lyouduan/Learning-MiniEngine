@@ -1,7 +1,15 @@
 #include "common.hlsli"
 
-float4 main(VertexOut input) : SV_TARGET
+struct PixelOutput
 {
+    float4 Normal : SV_TARGET0;
+    float4 WorldPos : SV_TARGET1;
+};
+
+PixelOutput main(VertexOut input) //: SV_TARGET
+{
+    PixelOutput pout;
+    
     MaterialData matData = gMaterialData[objConstants.gMaterialIndex];
     float4 diffuseAlbedo = matData.gDiffuseAlbedo;
     float3 fresnelR0 = matData.gFresnelR0;
@@ -17,5 +25,11 @@ float4 main(VertexOut input) : SV_TARGET
     // trasfer to view space
     float3 normalV = mul(input.normal, (float3x3)passConstants.gView);
     
-    return float4(normalV, 0.0);
+    pout.Normal = float4(normalV, 0.0);
+    
+    // test deferred rendering
+    pout.WorldPos = float4(input.positionW, 0.0);
+    
+    return pout;
+
 }
