@@ -95,3 +95,14 @@ __declspec(align(16)) struct PassConstants
 	float pad1;
 	float pad2;
 };
+
+__declspec(align(16)) struct SsaoPassConstants
+{
+	DirectX::XMFLOAT4X4 gProj;
+	DirectX::XMFLOAT4X4 gInvProj;
+	DirectX::XMFLOAT4X4 gProjTex;
+	float gOcclusionRadius = 1.0;
+	float gOcclusionFadeStart = 1.0;
+	float gOcclusionFadeEnd = 1.0;
+	float gSurfaceEpsilon = 1.0;
+};

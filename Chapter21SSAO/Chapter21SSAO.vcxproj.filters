@@ -316,6 +316,7 @@
     <None Include="shader\skyboxPS.cso" />
     <None Include="shader\skyboxVS.cso" />
     <None Include="shader\VertexShader.cso" />
+    <None Include="shader\ssaoCommon.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader\CSEsm.hlsl" />
@@ -334,5 +335,7 @@
     <FxCompile Include="shader\skyboxVS.hlsl" />
     <FxCompile Include="shader\VertexShader.hlsl" />
     <FxCompile Include="shader\normalPS.hlsl" />
+    <FxCompile Include="shader\ssaoVS.hlsl" />
+    <FxCompile Include="shader\ssaoPS.hlsl" />
   </ItemGroup>
 </Project>

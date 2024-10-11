@@ -4,18 +4,7 @@
 #include "Camera.h"
 #include "RootSignature.h"
 #include "PipelineState.h"
-
-__declspec(align(16)) struct SsaoPassConstants
-{
-	DirectX::XMFLOAT4X4 gProj;
-	DirectX::XMFLOAT4X4 gInvProj;
-	DirectX::XMFLOAT4X4 gProjTex;
-	
-	float gOcclusionRadius;
-	float gOcclusionFadeStart;
-	float gOcclusionFadeEnd;
-	float gSurfaceEpsilon;
-};
+#include "../d3dUtil.h"
 
 class SSAO
 {
@@ -48,10 +37,17 @@ public:
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetNormalRTV() const { return m_NormalMap.GetRTV(); }
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetSSAORTV() const { return m_SSAOMap.GetRTV(); }
 
+
+	const GraphicsPSO& GetPSO() const { return m_PSO; }
+	const RootSignature& GetRootSig() const { return m_RootSig; }
+	const SsaoPassConstants GetSsaoCB() const { return m_ssaoCB; }
+
 	D3D12_VIEWPORT Viewport() const { return m_Viewport; }
 	D3D12_RECT ScissorRect() const { return m_ScissorRect; }
 
-	void ComputeSSAO(GraphicsContext& gfxContext, Math::Camera camera, DepthBuffer& depthMap);
+	void ComputeSSAO(GraphicsContext& gfxContext,DepthBuffer& depthMap);
+
+	void UpdateCB(Math::Camera& camera);
 
 private:
 

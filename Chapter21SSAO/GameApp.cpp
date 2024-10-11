@@ -100,8 +100,9 @@ void GameApp::Update(float deltaT)
 	// update shadow info
 	UpdateShadowTranform(deltaT);
 
-	
-	totalTime += deltaT * 0.1;
+	//m_SSAO->UpdateCB(camera);
+
+	totalTime += deltaT * 0.0;
 	// animate the skull around the center sphere
 	XMMATRIX skullScale = XMMatrixScaling(0.2f, 0.2f, 0.2f);
 	XMMATRIX skullOffset = XMMatrixTranslation(3.0f, 2.0f, 0.0f);
@@ -132,6 +133,8 @@ void GameApp::RenderScene(void)
 	//DrawSceneToDepth2Map(gfxContext);
 
 	DrawSceneToNormal(gfxContext);
+
+	ComputeSSAO(gfxContext);
 
 	// ESM完成之前的绘制
 	m_BlurMap->Execute(m_shadowMap->GetShadowBuffer(), 1);
@@ -168,12 +171,13 @@ void GameApp::RenderScene(void)
 	gfxContext.SetBufferSRV(2, matBuffer);
 
 	// srv tables
+	gfxContext.SetDynamicDescriptor(3, 0, g_SceneCubeMapBuffer.GetSRV());
 	gfxContext.SetDynamicDescriptors(4, 0, m_srvs.size(), &m_srvs[0]);
 	gfxContext.SetDynamicDescriptors(5, 0, m_Normalsrvs.size(), &m_Normalsrvs[0]);
 
 	// debug Quad
-	//gfxContext.SetDynamicDescriptors(6, 0, 1, &m_shadowMap->GetSRV());
-	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_BlurMap->GetOutput().GetSRV());
+	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_shadowMap->GetSRV());
+	//gfxContext.SetDynamicDescriptors(6, 0, 1, &m_BlurMap->GetOutput().GetSRV());
 
 
 	// draw call
@@ -182,6 +186,8 @@ void GameApp::RenderScene(void)
 		gfxContext.SetPipelineState(m_PSOs["opaque"]);
 		DrawRenderItems(gfxContext, m_ShapeRenders[(int)RenderLayer::Opaque]);
 	}
+
+
 	
 	// dynamic cube mapping
 	gfxContext.SetPipelineState(m_PSOs["opaque"]);
@@ -190,7 +196,7 @@ void GameApp::RenderScene(void)
 
 	// debug shadow map
 	gfxContext.SetPipelineState(m_PSOs["debug"]);
-	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_SSAO->GetNormalSRV());
+	gfxContext.SetDynamicDescriptors(6, 0, 1, &m_SSAO->GetSSAOSRV());
 	DrawRenderItems(gfxContext, m_ShapeRenders[(int)RenderLayer::Quad]);
 
 	// draw sky box at last
@@ -340,6 +346,9 @@ void GameApp::SetPsoAndRootSig()
 	normalPSO.SetPixelShader(NormalPS);
 	normalPSO.Finalize();
 	m_PSOs["normal"] = normalPSO;
+
+
+
 }
 
 void GameApp::DrawRenderItems(GraphicsContext& gfxContext, std::vector<RenderItem*>& items)
@@ -535,6 +544,66 @@ void GameApp::DrawSceneToNormal(GraphicsContext& gfxContext)
 	gfxContext.TransitionResource(m_SSAO->GetNormalMap(), D3D12_RESOURCE_STATE_PRESENT, true);
 	gfxContext.TransitionResource(m_SSAO->GetPosMAP(), D3D12_RESOURCE_STATE_PRESENT, true);
 
+}
+
+void GameApp::ComputeSSAO(GraphicsContext& gfxContext)
+{
+	gfxContext.SetViewportAndScissor(m_SSAO->Viewport(), m_SSAO->ScissorRect());
+
+	gfxContext.TransitionResource(m_SSAO->GetSSAOMAP(), D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+
+	gfxContext.TransitionResource(m_SSAO->GetNormalMap(), D3D12_RESOURCE_STATE_GENERIC_READ, true);
+	gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+
+	// clear ssao map
+	gfxContext.ClearColor(m_SSAO->GetSSAOMAP());
+
+	// binding render target
+	gfxContext.SetRenderTarget(m_SSAO->GetSSAORTV());
+	
+	gfxContext.SetRootSignature(m_SSAO->GetRootSig());
+
+	// set PSO
+	gfxContext.SetPipelineState(m_SSAO->GetPSO());
+	// set Root Signature
+	// set SRV CBV 
+
+	XMMATRIX proj = camera.GetProjMatrix();
+	auto det = XMMatrixDeterminant(proj);
+	XMMATRIX invProj = XMMatrixInverse(&det, proj);
+
+	XMMATRIX T(
+		0.5f, 0.0f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.0f, 1.0f);
+
+	XMStoreFloat4x4(&ssaoCB.gProj, XMMatrixTranspose(camera.GetProjMatrix()));
+	XMStoreFloat4x4(&ssaoCB.gInvProj, XMMatrixTranspose(invProj));
+	XMStoreFloat4x4(&ssaoCB.gProjTex, XMMatrixTranspose(proj * T));
+
+	ssaoCB.gOcclusionRadius = 0.5f;
+	ssaoCB.gOcclusionFadeStart = 0.2f;
+	ssaoCB.gOcclusionFadeEnd = 1.0f;
+	ssaoCB.gSurfaceEpsilon = 0.05f;
+
+	gfxContext.SetDynamicConstantBufferView(0, sizeof(ssaoCB), &ssaoCB);
+
+	gfxContext.SetDynamicDescriptor(1, 0, m_SSAO->GetNormalSRV());
+	gfxContext.SetDynamicDescriptor(2, 0, g_SceneDepthBuffer.GetDepthSRV());
+
+	// draw fullscreen quad
+	//gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//gfxContext.SetVertexBuffers(0, 0, nullptr);
+	//gfxContext.SetIndexBuffer(nullptr);
+	//gfxContext.DrawInstanced(6, 1, 0, 0);
+
+	// draw call
+	{
+		DrawRenderItems(gfxContext, m_ShapeRenders[(int)RenderLayer::FullQuad]);
+	}
+
+	gfxContext.TransitionResource(m_SSAO->GetSSAOMAP(), D3D12_RESOURCE_STATE_GENERIC_READ, true);
 }
 
 void GameApp::BuildCubeFaceCamera(float x, float y, float z)

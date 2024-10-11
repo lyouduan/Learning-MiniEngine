@@ -75,6 +75,7 @@ private:
 	void DrawSceneToDepth2Map(GraphicsContext& gfxContext);
 
 	void DrawSceneToNormal(GraphicsContext& gfxContext);
+	void ComputeSSAO(GraphicsContext& gfxContext);
 
 	void BuildCubeFaceCamera(float x=0.0, float y=0.0, float z=0.0);
 
@@ -144,6 +145,8 @@ private:
 
 	PassConstants passConstant;
 	StructuredBuffer matBuffer;
+
+	SsaoPassConstants ssaoCB;
 
 	float totalTime = 0;
 
